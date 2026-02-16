@@ -5,6 +5,7 @@
  * 1. Menu Theme - upbeat signature theme (75 seconds)
  * 2. Level Theme - energetic loopable gameplay music (140 seconds)
  * 3. Victory Theme - triumphant fanfare (28 seconds)
+ * 4. Electricity Sound Effect - short electrical zap for terminal interactions
  * 
  * Requirements: npm install jsmidgen
  * Usage: node src/audio/MusicGenerator.js
@@ -456,6 +457,58 @@ function generateVictoryTheme() {
 }
 
 /**
+ * Generate Electricity Sound Effect - Short electrical zap for terminal interactions
+ * Structure: Quick burst (~0.5-1 second)
+ * BPM: 200
+ */
+function generateElectricitySound() {
+  const file = new Midi();
+  file.header.setTempo(200);
+  
+  // Synth track - Charang synth for electrical sound
+  const synthTrack = new Track();
+  synthTrack.setInstrument(84); // Charang - bright, piercing synth
+  synthTrack.setVolume(110);
+  
+  // Quick ascending chromatic burst (electric charge-up)
+  const zapSequence = [
+    NOTES.C5, NOTES.D5, NOTES.E5, NOTES.F5,
+    NOTES.G5, NOTES.A5, NOTES.B5, NOTES.C6,
+  ];
+  
+  for (let note of zapSequence) {
+    synthTrack.addNote(note, 0.05); // Very short, staccato notes
+  }
+  
+  // Quick descending sequence for "release" (electric discharge)
+  const releaseSequence = [NOTES.C6, NOTES.A5, NOTES.F5, NOTES.C5];
+  for (let note of releaseSequence) {
+    synthTrack.addNote(note, 0.05);
+  }
+  
+  // Add some "crackle" with rapid alternating high notes
+  const crackle = [NOTES.G6, NOTES.E6, NOTES.G6, NOTES.D6];
+  for (let note of crackle) {
+    synthTrack.addNote(note, 0.03); // Even shorter for crackle effect
+  }
+  
+  // Drum track for additional "zap" percussion
+  const drumTrack = new Track();
+  drumTrack.setChannel(9); // MIDI drum channel
+  drumTrack.setVolume(100);
+  
+  // Quick snare hits to add crackle
+  drumTrack.addNote(DRUMS.snare, 0.02);
+  drumTrack.addNote(DRUMS.closedHiHat, 0.02);
+  drumTrack.addNote(DRUMS.snare, 0.02);
+  
+  file.addTrack(synthTrack);
+  file.addTrack(drumTrack);
+  
+  return file;
+}
+
+/**
  * Save MIDI file
  */
 function saveMidiFile(midiFile, filename) {
@@ -507,6 +560,11 @@ export async function generateAllTracks() {
     const victoryTheme = generateVictoryTheme();
     saveMidiFile(victoryTheme, 'victory-theme.mid');
     
+    // Generate Electricity Sound Effect
+    console.log('⚡ Electricity Sound Effect (200 BPM, ~1 second)');
+    const electricitySound = generateElectricitySound();
+    saveMidiFile(electricitySound, 'electricity-sfx.mid');
+    
     console.log('\n✅ All music files generated successfully!');
     console.log(`📁 Output directory: ${OUTPUT_DIR}\n`);
     
@@ -528,4 +586,5 @@ export {
   generateMenuTheme,
   generateLevelTheme,
   generateVictoryTheme,
+  generateElectricitySound,
 };

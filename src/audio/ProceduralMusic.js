@@ -54,6 +54,13 @@ export class ProceduralMusic {
     this._schedule(this._victory(), false);
   }
 
+  /** Play electricity zap sound effect - short, non-looping */
+  playElectricity() {
+    this.init();
+    const t0 = this.ctx.currentTime + 0.01;
+    this._scheduleEffect(this._electricity(), t0);
+  }
+
   // ── internal ──────────────────────────────────────────────
 
   _play(name) {
@@ -87,6 +94,20 @@ export class ProceduralMusic {
           this._schedule(this._track === 'menu' ? this._menu() : this._level(), true);
         }
       }, end * 1000 + 80);
+    }
+  }
+
+  /** Schedule a one-shot sound effect without disrupting current music */
+  _scheduleEffect(seq, t0) {
+    if (!this.ctx) return;
+    
+    for (const n of seq) {
+      const t = t0 + n.t;
+      if (n.drum) {
+        this._drum(t, n.drum);
+      } else if (n.freq && n.freq > 0) {
+        this._tone(t, n.freq, n.d, n.wave || 'square', n.vol || 0.08);
+      }
     }
   }
 
@@ -254,6 +275,40 @@ export class ProceduralMusic {
     seq.push({ t: q * 1.8, drum: 'snare', freq: 0 });
     seq.push({ t: q * 1.8, drum: 'kick', freq: 0 });
 
+    return seq;
+  }
+
+  /** Electricity: quick zap sound effect, ~0.3s, high-pitched crackle */
+  _electricity() {
+    const seq = [];
+    const dur = 0.015; // Very short notes for crackle
+    
+    // Quick ascending chromatic burst (charge-up)
+    const zapNotes = [
+      NOTE.C5, NOTE.D5, NOTE.E5, NOTE.F5,
+      NOTE.G5, NOTE.A5, NOTE.B5, NOTE.C6,
+    ];
+    
+    let time = 0;
+    for (let i = 0; i < zapNotes.length; i++) {
+      seq.push({ t: time, freq: zapNotes[i], d: dur, wave: 'sawtooth', vol: 0.15 });
+      time += 0.02; // 20ms between notes
+    }
+    
+    // Quick descending release
+    const releaseNotes = [NOTE.C6, NOTE.A5, NOTE.F5, NOTE.C5];
+    for (let i = 0; i < releaseNotes.length; i++) {
+      seq.push({ t: time, freq: releaseNotes[i], d: dur, wave: 'sawtooth', vol: 0.12 });
+      time += 0.02;
+    }
+    
+    // High-frequency crackle
+    const crackleNotes = [NOTE.G6, NOTE.E6, NOTE.G6, NOTE.C6];
+    for (let i = 0; i < crackleNotes.length; i++) {
+      seq.push({ t: time, freq: crackleNotes[i], d: dur * 0.7, wave: 'square', vol: 0.08 });
+      time += 0.015;
+    }
+    
     return seq;
   }
 }
