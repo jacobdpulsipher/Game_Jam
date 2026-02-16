@@ -107,8 +107,8 @@ export const LEVEL_04 = {
     { x: (TOP_LEDGE_LEFT + TOP_LEDGE_RIGHT) / 2, y: TOP_Y + 16, width: TOP_LEDGE_RIGHT - TOP_LEDGE_LEFT, height: 32 },
 
     // Stairs from top down to Level A (visual assist)
-    { x: 120, y: TOP_Y + 60, width: 40, height: 40 },
-    { x: 140, y: TOP_Y + 120, width: 40, height: 40 },
+    { x: 120, y: TOP_Y + 60, width: 60, height: 40 },
+    { x: 140, y: TOP_Y + 120, width: 60, height: 40 },
 
     // LEVEL A (mid-air platform with E1)
     { x: (LEVEL_A_LEFT + LEVEL_A_RIGHT) / 2, y: LEVEL_A + 16, width: LEVEL_A_RIGHT - LEVEL_A_LEFT, height: 32 },
@@ -117,9 +117,9 @@ export const LEVEL_04 = {
     { x: LEVEL_B_PLATFORM_LEFT + (LEVEL_B_PLATFORM_RIGHT - LEVEL_B_PLATFORM_LEFT) / 2, y: LEVEL_B + 16, width: LEVEL_B_PLATFORM_RIGHT - LEVEL_B_PLATFORM_LEFT, height: 32 },
 
     // Stairs from top down (alternative path)
-    { x: STAIRS_C_X, y: LEVEL_A + 80, width: 40, height: 40 },
-    { x: STAIRS_C_X, y: LEVEL_A + 140, width: 40, height: 40 },
-    { x: STAIRS_C_X, y: LEVEL_C - 40, width: 40, height: 40 },
+    { x: STAIRS_C_X, y: LEVEL_A + 80, width: 60, height: 40 },
+    { x: STAIRS_C_X, y: LEVEL_A + 140, width: 60, height: 40 },
+    { x: STAIRS_C_X, y: LEVEL_C - 40, width: 60, height: 40 },
 
     // LEVEL C (main mid-platform, accessible via elevator or stairs)
     { x: 400, y: LEVEL_C + 16, width: 300, height: 32 },

@@ -53,7 +53,7 @@ Hero is an electrician who connects extension cords from generators to terminals
 
 ## Art & Audio Integration
 - [x] Created `src/assets/AssetTextures.js` — procedural texture generators for doors, elevators, drawbridges, crates, outlets, plugs
-- [x] Created `src/assets/ElectricianSprite.js` — 14-frame procedural hero spritesheet (28×48, idle/run/grab/jump/fall)
+- [x] Created `src/assets/ElectricianSprite.js` — 14-frame procedural hero spritesheet (48×64, idle/run/grab/jump/fall)
 - [x] Wired art textures into all entity constructors (SlideDoor, Elevator, Drawbridge, PushBlock, Terminal, ExtensionCord)
 - [x] Created dark city backdrop with parallax skyline in `GameScene._drawCityBackdrop()`
 - [x] Created `src/audio/ProceduralMusic.js` — Web Audio API chiptune synth (menu/level/victory tracks)

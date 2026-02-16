@@ -41,7 +41,7 @@ The player navigates through a series of interconnected puzzle rooms in a 2D sid
 - All textures are **procedurally generated** at runtime in PreloadScene (no external images).
 - Music is **procedurally synthesized** via Web Audio API (no external audio files).
 - Constants and magic numbers go in `src/config.js`.
-- Hero sprite is 28×48 pixels, physics tile size is 32×32.
+- Hero sprite is 48×64 pixels, physics tile size is 32×32.
 
 ## Running the Game
 ```bash

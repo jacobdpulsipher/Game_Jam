@@ -106,9 +106,9 @@ export const LEVEL_03 = {
     { x: 1100 + 200, y: UPPER_Y + 16, width: 400, height: 32 },
 
     // Stairs (staircase from floor to upper ledge)
-    { x: 1290, y: FLOOR_Y - 20, width: 40, height: 40 },
-    { x: 1310, y: FLOOR_Y - 80, width: 40, height: 40 },
-    { x: 1330, y: FLOOR_Y - 140, width: 40, height: 40 },
+    { x: 1290, y: FLOOR_Y - 20, width: 60, height: 40 },
+    { x: 1310, y: FLOOR_Y - 80, width: 60, height: 40 },
+    { x: 1330, y: FLOOR_Y - 140, width: 60, height: 40 },
 
     // Walls
     { x: 8, y: WORLD_H / 2, width: 16, height: WORLD_H },

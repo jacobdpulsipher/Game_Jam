@@ -17,8 +17,8 @@ export const GRAVITY = 900;
 export const PLAYER = {
   SPEED: 200,
   JUMP_VELOCITY: -420,   // high enough to jump over a 32px block
-  WIDTH: 28,
-  HEIGHT: 48,
+  WIDTH: 48,
+  HEIGHT: 64,
   COLOR: 0xffcc00,       // placeholder yellow
 };
 

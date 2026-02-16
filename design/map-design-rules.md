@@ -13,7 +13,7 @@
 | Player speed | 200 px/s | Horizontal |
 | Jump velocity | −420 px/s | Initial upward burst |
 | **Max jump height** | **≈ 98 px** | v² / (2g) = 420² / 1800 |
-| Player size | 28 × 48 px | Width × Height |
+| Player size | 48 × 64 px | Width × Height |
 | Push block size | 48 × 48 px | Square |
 | Door default size | 32 × 128 px | Width × Height |
 | Elevator default size | 80 × 16 px | Width × Height (thin platform) |

@@ -9,7 +9,7 @@ Detailed specs for the game's core mechanics.
 - **Speed:** 200 px/s (PLAYER.SPEED)
 - **Jump velocity:** -420 (PLAYER.JUMP_VELOCITY)
 - **Gravity:** 900 (global)
-- **Size:** 28×48 px
+- **Size:** 48×64 px
 - **Controls:** WASD / Arrow keys for movement, W/Up/Space for jump
 - **World bounds collision:** enabled
 
