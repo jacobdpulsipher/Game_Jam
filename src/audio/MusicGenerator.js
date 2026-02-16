@@ -33,8 +33,8 @@ if (!existsSync(OUTPUT_DIR)) {
 async function initializeMidi() {
   try {
     const jsmidgen = await import('jsmidgen');
-    Midi = jsmidgen.Midi;
-    Track = jsmidgen.Track;
+    Midi = jsmidgen.default.File;
+    Track = jsmidgen.default.Track;
     console.log('✓ jsmidgen loaded successfully');
     return true;
   } catch (error) {
@@ -72,10 +72,10 @@ const DRUMS = {
  */
 function generateMenuTheme() {
   const file = new Midi();
-  file.header.setTempo(150);
   
   // Lead melody track - Synth Brass tone
   const leadTrack = new Track();
+  leadTrack.setTempo(150); // BPM set on first track
   leadTrack.setInstrument(61); // Synth Brass 1
   leadTrack.setVolume(100);
   
@@ -234,9 +234,9 @@ function generateMenuTheme() {
  */
 function generateLevelTheme() {
   const file = new Midi();
-  file.header.setTempo(155);
   
   const leadTrack = new Track();
+  leadTrack.setTempo(155); // BPM set on first track
   leadTrack.setInstrument(80); // Square wave synthesizer
   leadTrack.setVolume(100);
   
@@ -373,9 +373,9 @@ function generateLevelTheme() {
  */
 function generateVictoryTheme() {
   const file = new Midi();
-  file.header.setTempo(160);
   
   const leadTrack = new Track();
+  leadTrack.setTempo(160); // BPM set on first track
   leadTrack.setInstrument(56); // Trumpet
   leadTrack.setVolume(110);
   
@@ -463,12 +463,11 @@ function generateVictoryTheme() {
  */
 function generateElectricitySound() {
   const file = new Midi();
-  file.header.setTempo(200);
   
   // Synth track - Charang synth for electrical sound
   const synthTrack = new Track();
-  synthTrack.setInstrument(84); // Charang - bright, piercing synth
-  synthTrack.setVolume(110);
+  synthTrack.setTempo(200); // BPM set on first track
+  synthTrack.setInstrument(0, 84); // Channel 0, Charang instrument - bright, piercing synth
   
   // Quick ascending chromatic burst (electric charge-up)
   const zapSequence = [
@@ -477,33 +476,22 @@ function generateElectricitySound() {
   ];
   
   for (let note of zapSequence) {
-    synthTrack.addNote(note, 0.05); // Very short, staccato notes
+    synthTrack.addNote(0, note, 3); // Channel 0, very short duration (3 ticks)
   }
   
   // Quick descending sequence for "release" (electric discharge)
   const releaseSequence = [NOTES.C6, NOTES.A5, NOTES.F5, NOTES.C5];
   for (let note of releaseSequence) {
-    synthTrack.addNote(note, 0.05);
+    synthTrack.addNote(0, note, 3); // Channel 0, very short duration
   }
   
   // Add some "crackle" with rapid alternating high notes
   const crackle = [NOTES.G6, NOTES.E6, NOTES.G6, NOTES.D6];
   for (let note of crackle) {
-    synthTrack.addNote(note, 0.03); // Even shorter for crackle effect
+    synthTrack.addNote(0, note, 2); // Channel 0, even shorter for crackle effect
   }
   
-  // Drum track for additional "zap" percussion
-  const drumTrack = new Track();
-  drumTrack.setChannel(9); // MIDI drum channel
-  drumTrack.setVolume(100);
-  
-  // Quick snare hits to add crackle
-  drumTrack.addNote(DRUMS.snare, 0.02);
-  drumTrack.addNote(DRUMS.closedHiHat, 0.02);
-  drumTrack.addNote(DRUMS.snare, 0.02);
-  
   file.addTrack(synthTrack);
-  file.addTrack(drumTrack);
   
   return file;
 }
