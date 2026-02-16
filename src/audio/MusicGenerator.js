@@ -458,7 +458,7 @@ function generateVictoryTheme() {
 
 /**
  * Generate Electricity Sound Effect - Short electrical zap for terminal interactions
- * Structure: Quick burst (~0.5-1 second)
+ * Structure: Quick burst (~0.3 seconds)
  * BPM: 200
  */
 function generateElectricitySound() {
