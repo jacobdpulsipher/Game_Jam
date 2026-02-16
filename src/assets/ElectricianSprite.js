@@ -4,96 +4,96 @@
  * Procedurally generates a sprite sheet for "Sparky" the electrician hero.
  * Creates all animation frames (IDLE, RUN, GRAB/PUSH, JUMP, FALL) as a single texture.
  *
- * Character Design:
+ * Character Design (matches reference art):
  *   - 28x48 pixel character
- *   - Blonde/yellow spiky hair
- *   - Blue electrician shirt, khaki pants
- *   - Happy expression with red cheeks
- *   - Carries a wrench tool
+ *   - Orange/yellow hard hat
+ *   - Brown beard, friendly face
+ *   - Teal-blue work shirt with chest pocket
+ *   - Brown tool belt with buckle
+ *   - Blue work pants
+ *   - Brown work boots
+ *   - Holds extension cord plug in right hand
  */
+
+// ── Palette ────────────────────────────────────────────────
+const PAL = {
+  skin:      0xd4a373,  // warm tan
+  skinDark:  0xb88b5e,  // shadowed skin / ear
+  beard:     0x7a4f2b,  // brown beard
+  hat:       0xf5a623,  // orange/yellow hard hat
+  hatBrim:   0xd48b12,  // hat brim (darker)
+  hatHigh:   0xffc95c,  // hat highlight
+  shirt:     0x3a9fbf,  // teal-blue shirt
+  shirtDark: 0x2c7a94,  // shirt shadow
+  pocket:    0x4db8d6,  // pocket accent
+  belt:      0x6b4226,  // brown tool belt
+  buckle:    0xffc107,  // gold buckle
+  pants:     0x1e6fa0,  // blue work pants
+  pantsDark: 0x185a82,  // pant shadow
+  boot:      0x5c3a1e,  // brown boot
+  bootSole:  0x3d2412,  // dark boot sole
+  eye:       0x1a1a1a,  // near-black eye dot
+  eyeWhite:  0xffffff,
+  mouth:     0xd45a5a,  // warm smile
+  cheek:     0xe8946b,  // subtle blush
+  cordOrange:0xff8c00,  // extension cord
+  cordPlug:  0xc0c0c0,  // plug metal
+  cordProng: 0x888888,  // prong gray
+};
 
 /**
  * Main entry point: generates the electrician sprite sheet and registers animations.
- *
- * @param {Phaser.Scene} scene - The Phaser scene where the texture will be registered
- * @returns {Object} AnimationData object with texture key and animation definitions
  */
 export function generateElectricianSpriteSheet(scene) {
-  const W = 28;  // Frame width
-  const H = 48;  // Frame height
+  const W = 28;
+  const H = 48;
 
-  // Create a graphics object for drawing
   const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
   graphics.setDepth(-1);
 
-  // Total: 14 frames (1 idle + 6 run + 4 grab + 2 jump + 1 fall)
-  // Arrange in 2 columns x 7 rows = 56x336 texture
   const cols = 2;
   const rows = 7;
   const textureWidth = W * cols;
   const textureHeight = H * rows;
 
-  // Clear with transparent background
-  graphics.fillStyle(0xffffff, 0); // Fully transparent white
+  graphics.fillStyle(0xffffff, 0);
   graphics.fillRect(0, 0, textureWidth, textureHeight);
 
-  // Draw each frame
-  let frameIndex = 0;
+  let fi = 0;
 
-  // Frame 0: IDLE (standing still, happy)
-  drawIdleFrame(graphics, frameIndex, W, H);
-  frameIndex++;
+  // Frame 0: IDLE
+  drawIdle(graphics, fi++, W, H);
 
-  // Frames 1-6: RUN (running animation)
-  for (let i = 0; i < 6; i++) {
-    drawRunFrame(graphics, frameIndex, W, H, i);
-    frameIndex++;
-  }
+  // Frames 1-6: RUN cycle
+  for (let i = 0; i < 6; i++) drawRun(graphics, fi++, W, H, i);
 
-  // Frames 7-10: GRAB/PUSH (pushing block animation)
-  for (let i = 0; i < 4; i++) {
-    drawGrabFrame(graphics, frameIndex, W, H, i);
-    frameIndex++;
-  }
+  // Frames 7-10: GRAB/PUSH
+  for (let i = 0; i < 4; i++) drawGrab(graphics, fi++, W, H, i);
 
-  // Frames 11-12: JUMP (jump takeoff and apex)
-  for (let i = 0; i < 2; i++) {
-    drawJumpFrame(graphics, frameIndex, W, H, i);
-    frameIndex++;
-  }
+  // Frames 11-12: JUMP
+  for (let i = 0; i < 2; i++) drawJump(graphics, fi++, W, H, i);
 
-  // Frame 13: FALL (falling/airborne)
-  drawFallFrame(graphics, frameIndex, W, H);
+  // Frame 13: FALL
+  drawFall(graphics, fi++, W, H);
 
-  // Generate texture from graphics
+  // Generate texture & carve frames
   graphics.generateTexture('electrician', textureWidth, textureHeight);
   graphics.destroy();
 
-  // Manually add sprite-sheet frames to the generated texture.
-  // generateTexture() creates a single-frame image; we carve individual frames.
   const tex = scene.textures.get('electrician');
-
-  // Remove the auto-created __BASE frame first to avoid conflicts
-  // Then re-add all individual frames
-  const totalFrames = cols * rows;   // 14 actual frames, grid is 2×7
-
+  const totalFrames = cols * rows;
   for (let i = 0; i < totalFrames; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    // Use string keys to avoid collision with auto-generated frame 0
     tex.add(i, 0, col * W, row * H, W, H);
   }
 
-  // Helper: build frame number array for a range
   const frameRange = (start, end) => {
     const frames = [];
-    for (let i = start; i <= end; i++) {
-      frames.push({ key: 'electrician', frame: i });
-    }
+    for (let i = start; i <= end; i++) frames.push({ key: 'electrician', frame: i });
     return frames;
   };
 
-  // Return animation configuration
   return {
     textureKey: 'electrician',
     frames: { frameWidth: W, frameHeight: H },
@@ -107,472 +107,363 @@ export function generateElectricianSpriteSheet(scene) {
   };
 }
 
-/**
- * Helper: Calculate grid position for a frame index
- */
-function getFrameGridPos(frameIndex, cols, W, H) {
-  const col = frameIndex % cols;
-  const row = Math.floor(frameIndex / cols);
+// ── Grid helper ────────────────────────────────────────────
+function gp(fi, W, H) {
+  const col = fi % 2;
+  const row = Math.floor(fi / 2);
   return { x: col * W, y: row * H };
 }
 
-/**
- * Draw IDLE frame (facing right, standing still, happy)
- */
-function drawIdleFrame(graphics, frameIndex, W, H) {
-  const cols = 2;
-  const pos = getFrameGridPos(frameIndex, cols, W, H);
-  const x = pos.x;
-  const y = pos.y;
+// ══════════════════════════════════════════════════════════════
+// Shared sub-drawing helpers
+// ══════════════════════════════════════════════════════════════
 
-  drawCharacterBase(graphics, x, y, W, H, 0); // no leg movement
+/** Draw the hard hat at (hx, hy) relative to frame top-left */
+function drawHat(g, px, py, tilt) {
+  const t = tilt || 0;
+  // Brim
+  g.fillStyle(PAL.hatBrim, 1);
+  g.fillRect(px + 7 + t, py + 5, 14, 2);
+  // Dome
+  g.fillStyle(PAL.hat, 1);
+  g.fillRect(px + 9 + t, py + 1, 10, 5);
+  // Highlight stripe
+  g.fillStyle(PAL.hatHigh, 1);
+  g.fillRect(px + 10 + t, py + 2, 6, 1);
 }
 
-/**
- * Draw RUN frame (running animation)
- * legPhase: 0-5 for legs cycling through run animation
- */
-function drawRunFrame(graphics, frameIndex, W, H, legPhase) {
-  const cols = 2;
-  const pos = getFrameGridPos(frameIndex, cols, W, H);
-  const x = pos.x;
-  const y = pos.y;
+/** Draw face: skin, beard, eyes, smile */
+function drawFace(g, px, py, expression) {
+  // expression: 'happy' | 'grin' | 'strain' | 'surpris'
 
-  // Alternate leg animation: left leg forward (0,2,4) vs right leg forward (1,3,5)
-  const leftLegForward = (legPhase % 2) === 0;
+  // Face block (skin)
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 9, py + 7, 10, 9);
 
-  // Draw body with running animation
-  drawRunningCharacter(graphics, x, y, W, H, leftLegForward);
+  // Ear (right side)
+  g.fillStyle(PAL.skinDark, 1);
+  g.fillRect(px + 19, py + 9, 1, 3);
+
+  // Beard (lower face)
+  g.fillStyle(PAL.beard, 1);
+  g.fillRect(px + 9, py + 12, 10, 4);
+  // Sideburns
+  g.fillRect(px + 8, py + 10, 1, 4);
+  g.fillRect(px + 19, py + 10, 1, 4);
+
+  // Eyes
+  if (expression === 'strain') {
+    // Squinting
+    g.fillStyle(PAL.eye, 1);
+    g.fillRect(px + 11, py + 9, 2, 1);
+    g.fillRect(px + 16, py + 9, 2, 1);
+  } else if (expression === 'surpris') {
+    // Wide eyes
+    g.fillStyle(PAL.eyeWhite, 1);
+    g.fillRect(px + 11, py + 8, 2, 2);
+    g.fillRect(px + 16, py + 8, 2, 2);
+    g.fillStyle(PAL.eye, 1);
+    g.fillRect(px + 12, py + 9, 1, 1);
+    g.fillRect(px + 17, py + 9, 1, 1);
+  } else {
+    // Happy / grin — bright eyes
+    g.fillStyle(PAL.eyeWhite, 1);
+    g.fillRect(px + 11, py + 8, 2, 2);
+    g.fillRect(px + 16, py + 8, 2, 2);
+    g.fillStyle(PAL.eye, 1);
+    g.fillRect(px + 12, py + 8, 1, 1);
+    g.fillRect(px + 17, py + 8, 1, 1);
+  }
+
+  // Cheeks (blush)
+  g.fillStyle(PAL.cheek, 1);
+  g.fillRect(px + 9, py + 11, 1, 1);
+  g.fillRect(px + 19, py + 11, 1, 1);
+
+  // Mouth in beard area
+  if (expression === 'grin' || expression === 'happy') {
+    // Smile
+    g.fillStyle(PAL.mouth, 1);
+    g.fillRect(px + 12, py + 13, 4, 1);
+    // Upturned corners
+    g.fillRect(px + 11, py + 12, 1, 1);
+    g.fillRect(px + 16, py + 12, 1, 1);
+  } else if (expression === 'surpris') {
+    // O mouth
+    g.fillStyle(PAL.mouth, 1);
+    g.fillRect(px + 13, py + 13, 2, 2);
+  } else {
+    // Neutral pressed lips
+    g.fillStyle(PAL.mouth, 1);
+    g.fillRect(px + 12, py + 13, 4, 1);
+  }
 }
 
-/**
- * Draw GRAB/PUSH frame (pushing/dragging block)
- * pushPhase: 0-3 for push motion progression
- */
-function drawGrabFrame(graphics, frameIndex, W, H, pushPhase) {
-  const cols = 2;
-  const pos = getFrameGridPos(frameIndex, cols, W, H);
-  const x = pos.x;
-  const y = pos.y;
-
-  drawPushingCharacter(graphics, x, y, W, H, pushPhase);
+/** Draw shirt torso at standard position */
+function drawShirt(g, px, py, lean) {
+  const l = lean || 0;
+  // Main shirt
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 7 + l, py + 16, 14, 11);
+  // Shadow on side
+  g.fillStyle(PAL.shirtDark, 1);
+  g.fillRect(px + 7 + l, py + 16, 2, 11);
+  // Chest pocket
+  g.fillStyle(PAL.pocket, 1);
+  g.fillRect(px + 16 + l, py + 18, 3, 3);
+  // Collar
+  g.fillStyle(PAL.shirtDark, 1);
+  g.fillRect(px + 11 + l, py + 16, 6, 1);
 }
 
-/**
- * Draw JUMP frame (taking off or in air)
- * jumpPhase: 0 = takeoff, 1 = apex
- */
-function drawJumpFrame(graphics, frameIndex, W, H, jumpPhase) {
-  const cols = 2;
-  const pos = getFrameGridPos(frameIndex, cols, W, H);
-  const x = pos.x;
-  const y = pos.y;
-
-  drawJumpingCharacter(graphics, x, y, W, H, jumpPhase);
+/** Draw tool belt */
+function drawBelt(g, px, py) {
+  g.fillStyle(PAL.belt, 1);
+  g.fillRect(px + 7, py + 27, 14, 2);
+  // Buckle
+  g.fillStyle(PAL.buckle, 1);
+  g.fillRect(px + 13, py + 27, 2, 2);
+  // Tool pouch (right hip)
+  g.fillStyle(PAL.belt, 1);
+  g.fillRect(px + 19, py + 29, 2, 3);
 }
 
-/**
- * Draw FALL frame (falling/airborne)
- */
-function drawFallFrame(graphics, frameIndex, W, H) {
-  const cols = 2;
-  const pos = getFrameGridPos(frameIndex, cols, W, H);
-  const x = pos.x;
-  const y = pos.y;
-
-  drawFallingCharacter(graphics, x, y, W, H);
+/** Draw extension cord plug in hand at (hx, hy) */
+function drawCordPlug(g, hx, hy) {
+  // Short dangling cord
+  g.fillStyle(PAL.cordOrange, 1);
+  g.fillRect(hx, hy, 1, 5);
+  // Plug body
+  g.fillStyle(PAL.cordPlug, 1);
+  g.fillRect(hx - 1, hy + 5, 3, 2);
+  // Prongs
+  g.fillStyle(PAL.cordProng, 1);
+  g.fillRect(hx - 1, hy + 7, 1, 2);
+  g.fillRect(hx + 1, hy + 7, 1, 2);
 }
 
-/**
- * Base character drawing (standing, no motion)
- */
-function drawCharacterBase(graphics, px, py, W, H, legTilt = 0) {
-  const cx = px + W / 2;
-  const cy = py + H / 2;
+/** Draw boots at given positions */
+function drawBoots(g, px, leftY, rightY) {
+  g.fillStyle(PAL.boot, 1);
+  g.fillRect(px, leftY, 4, 3);
+  g.fillRect(px + 14, rightY, 4, 3);
+  // Soles
+  g.fillStyle(PAL.bootSole, 1);
+  g.fillRect(px, leftY + 3, 5, 1);
+  g.fillRect(px + 14, rightY + 3, 5, 1);
+}
 
-  // ===== BODY =====
-  // Khaki pants
-  graphics.fillStyle(0xc9a961, 1); // khaki
-  graphics.fillRect(px + 9, py + 28, 10, 10);
+// ══════════════════════════════════════════════════════════════
+// Frame drawing functions
+// ══════════════════════════════════════════════════════════════
 
-  // Blue shirt
-  graphics.fillStyle(0x2563eb, 1); // blue
-  graphics.fillRect(px + 7, py + 15, 14, 13);
+function drawIdle(g, fi, W, H) {
+  const { x: px, y: py } = gp(fi, W, H);
+
+  drawHat(g, px, py, 0);
+  drawFace(g, px, py, 'happy');
 
   // Neck
-  graphics.fillStyle(0xf5deb3, 1); // tan/skin
-  graphics.fillRect(px + 12, py + 13, 4, 3);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 12, py + 15, 4, 2);
 
-  // ===== HEAD =====
-  // Face (skin color)
-  graphics.fillStyle(0xf5deb3, 1); // tan/skin
-  graphics.fillRect(px + 9, py + 5, 10, 8);
+  drawShirt(g, px, py, 0);
+  drawBelt(g, px, py);
 
-  // ===== HAIR (Spiky blonde) =====
-  graphics.fillStyle(0xffff00, 1); // bright yellow
-  // Left spike
-  graphics.fillRect(px + 8, py + 2, 2, 3);
-  // Center spikes (upward)
-  graphics.fillRect(px + 11, py + 1, 2, 4);
-  graphics.fillRect(px + 13, py + 2, 2, 3);
-  // Right spike
-  graphics.fillRect(px + 16, py + 3, 2, 2);
+  // Pants
+  g.fillStyle(PAL.pants, 1);
+  g.fillRect(px + 8, py + 29, 5, 11);
+  g.fillRect(px + 15, py + 29, 5, 11);
 
-  // ===== FACE FEATURES =====
-  // Eyes (happy, looking forward)
-  graphics.fillStyle(0x000000, 1); // black
-  graphics.fillRect(px + 11, py + 7, 1, 1);
-  graphics.fillRect(px + 15, py + 7, 1, 1);
+  // Left arm relaxed
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 4, py + 17, 3, 6);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 4, py + 23, 3, 3);
 
-  // Red cheeks (happy expression)
-  graphics.fillStyle(0xff6b6b, 1); // red
-  graphics.fillRect(px + 9, py + 8, 1, 1);
-  graphics.fillRect(px + 17, py + 8, 1, 1);
+  // Right arm holding cord
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 21, py + 17, 3, 6);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 21, py + 23, 3, 3);
+  drawCordPlug(g, px + 23, py + 25);
 
-  // Smile (simple curved line)
-  graphics.fillStyle(0x000000, 1);
-  graphics.fillRect(px + 12, py + 10, 4, 1);
-
-  // ===== ARMS =====
-  // Left arm (relaxed)
-  graphics.fillStyle(0xf5deb3, 1); // skin
-  graphics.fillRect(px + 5, py + 16, 2, 8);
-
-  // Right arm (relaxed)
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 21, py + 16, 2, 8);
-
-  // ===== WRENCH ACCESSORY =====
-  // Hold wrench in right hand
-  graphics.fillStyle(0xcc6600, 1); // brown/orange metal
-  graphics.fillRect(px + 23, py + 18, 3, 2);
-  graphics.fillRect(px + 24, py + 20, 2, 2);
-
-  // ===== LEGS =====
-  // Left leg
-  graphics.fillStyle(0xc9a961, 1); // khaki
-  graphics.fillRect(px + 8, py + 28, 3, 10 + legTilt);
-
-  // Right leg
-  graphics.fillStyle(0xc9a961, 1);
-  graphics.fillRect(px + 17, py + 28, 3, 10 - legTilt);
-
-  // ===== SHOES =====
-  graphics.fillStyle(0x333333, 1); // dark gray
-  graphics.fillRect(px + 8, py + 38, 3, 2);
-  graphics.fillRect(px + 17, py + 38, 3, 2);
+  drawBoots(g, px + 7, py + 40, py + 40);
 }
 
-/**
- * Draw character in running pose
- */
-function drawRunningCharacter(graphics, px, py, W, H, leftLegForward) {
-  const cx = px + W / 2;
-  const cy = py + H / 2;
+function drawRun(g, fi, W, H, phase) {
+  const { x: px, y: py } = gp(fi, W, H);
+  const leftFwd = (phase % 2) === 0;
+  const bob = (phase === 1 || phase === 4) ? -1 : 0;
 
-  // ===== BODY (tilted slightly forward) =====
-  // Khaki pants
-  graphics.fillStyle(0xc9a961, 1); // khaki
-  graphics.fillRect(px + 9, py + 26, 10, 12);
-
-  // Blue shirt (leaning)
-  graphics.fillStyle(0x2563eb, 1); // blue
-  graphics.fillRect(px + 8, py + 14, 13, 14);
+  drawHat(g, px, py + bob, leftFwd ? -1 : 1);
+  drawFace(g, px, py + bob, 'grin');
 
   // Neck
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 12, py + 12, 4, 3);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 12, py + 15 + bob, 4, 2);
 
-  // ===== HEAD =====
-  graphics.fillStyle(0xf5deb3, 1); // skin
-  graphics.fillRect(px + 9, py + 4, 10, 8);
+  drawShirt(g, px, py + bob, 0);
+  drawBelt(g, px, py + bob);
 
-  // ===== HAIR (tilted with movement) =====
-  const hairTilt = leftLegForward ? -1 : 1; // lean into run direction
-  graphics.fillStyle(0xffff00, 1); // yellow
-  graphics.fillRect(px + 8 - hairTilt, py + 1, 2, 4);
-  graphics.fillRect(px + 11 - hairTilt, py + 0, 2, 5);
-  graphics.fillRect(px + 14 - hairTilt, py + 1, 2, 4);
-  graphics.fillRect(px + 17 - hairTilt, py + 2, 2, 3);
+  // Legs — alternating strides
+  g.fillStyle(PAL.pants, 1);
+  if (leftFwd) {
+    g.fillRect(px + 8,  py + 29 + bob, 5, 11);
+    g.fillRect(px + 15, py + 31 + bob, 5, 7);
 
-  // ===== FACE (happy/energetic) =====
-  graphics.fillStyle(0x000000, 1); // eyes closed/squinting when running
-  graphics.fillRect(px + 11, py + 6, 1, 1);
-  graphics.fillRect(px + 15, py + 6, 1, 1);
+    drawBoots(g, px + 7, py + 40, py + 38 + bob);
+  } else {
+    g.fillRect(px + 8,  py + 31 + bob, 5, 7);
+    g.fillRect(px + 15, py + 29 + bob, 5, 11);
 
-  // Big red cheeks (happy/energetic)
-  graphics.fillStyle(0xff6b6b, 1);
-  graphics.fillRect(px + 9, py + 8, 2, 1);
-  graphics.fillRect(px + 17, py + 8, 2, 1);
+    drawBoots(g, px + 7, py + 38 + bob, py + 40);
+  }
 
-  // ===== ARMS (swinging) =====
-  if (leftLegForward) {
-    // Right arm forward
-    graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillRect(px + 23, py + 15, 2, 9);
+  // Arms swinging
+  if (leftFwd) {
     // Left arm back
-    graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillRect(px + 3, py + 18, 2, 8);
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 3, py + 20 + bob, 3, 5);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 3, py + 25 + bob, 3, 2);
+
+    // Right arm forward holding cord
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 22, py + 15 + bob, 3, 6);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 22, py + 21 + bob, 3, 2);
+    drawCordPlug(g, px + 24, py + 22 + bob);
   } else {
     // Left arm forward
-    graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillRect(px + 3, py + 15, 2, 9);
-    // Right arm back
-    graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillRect(px + 23, py + 18, 2, 8);
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 3, py + 15 + bob, 3, 6);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 3, py + 21 + bob, 3, 2);
+
+    // Right arm back with cord
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 22, py + 20 + bob, 3, 5);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 22, py + 25 + bob, 3, 2);
+    drawCordPlug(g, px + 24, py + 26 + bob);
   }
-
-  // ===== WRENCH (swinging with run) =====
-  const wrenchX = leftLegForward ? 25 : 3;
-  graphics.fillStyle(0xcc6600, 1);
-  graphics.fillRect(px + wrenchX, py + 22, 2, 2);
-
-  // ===== LEGS (running animation) =====
-  if (leftLegForward) {
-    // Left leg raised/forward
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 8, py + 24, 3, 14);
-    // Right leg back/extended
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 17, py + 30, 3, 8);
-  } else {
-    // Right leg raised/forward
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 17, py + 24, 3, 14);
-    // Left leg back/extended
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 8, py + 30, 3, 8);
-  }
-
-  // ===== SHOES =====
-  graphics.fillStyle(0x333333, 1);
-  graphics.fillRect(px + 8, py + 38, 3, 2);
-  graphics.fillRect(px + 17, py + 38, 3, 2);
 }
 
-/**
- * Draw character pushing/dragging a block
- */
-function drawPushingCharacter(graphics, px, py, W, H, pushPhase) {
-  const cx = px + W / 2;
-  const cy = py + H / 2;
+function drawGrab(g, fi, W, H, phase) {
+  const { x: px, y: py } = gp(fi, W, H);
+  const lean = phase < 2 ? 0 : -1;
+  const step = phase % 2 === 0;
 
-  // ===== BODY (leaning forward with strain) =====
-  const bodyLean = pushPhase < 2 ? 0 : -1;
-
-  // Khaki pants
-  graphics.fillStyle(0xc9a961, 1); // khaki
-  graphics.fillRect(px + 9, py + 28 + bodyLean, 10, 10);
-
-  // Blue shirt (leaning forward)
-  graphics.fillStyle(0x2563eb, 1); // blue
-  graphics.fillRect(px + 8 + bodyLean, py + 15, 13, 13);
+  drawHat(g, px, py, lean);
+  drawFace(g, px, py, 'strain');
 
   // Neck
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 12 + bodyLean, py + 13, 4, 3);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 12 + lean, py + 15, 4, 2);
 
-  // ===== HEAD =====
-  graphics.fillStyle(0xf5deb3, 1); // skin
-  graphics.fillRect(px + 9 + bodyLean, py + 5, 10, 8);
+  drawShirt(g, px, py, lean);
+  drawBelt(g, px, py);
 
-  // ===== HAIR =====
-  graphics.fillStyle(0xffff00, 1); // yellow
-  graphics.fillRect(px + 8 + bodyLean, py + 2, 2, 3);
-  graphics.fillRect(px + 11 + bodyLean, py + 1, 2, 4);
-  graphics.fillRect(px + 14 + bodyLean, py + 2, 2, 3);
-  graphics.fillRect(px + 17 + bodyLean, py + 3, 2, 2);
-
-  // ===== FACE (strained/focused) =====
-  graphics.fillStyle(0x000000, 1); // eyes
-  graphics.fillRect(px + 11 + bodyLean, py + 7, 1, 1);
-  graphics.fillRect(px + 15 + bodyLean, py + 7, 1, 1);
-
-  // Cheeks (effort/strain)
-  graphics.fillStyle(0xff8888, 1); // lighter red
-  graphics.fillRect(px + 9 + bodyLean, py + 8, 1, 1);
-  graphics.fillRect(px + 17 + bodyLean, py + 8, 1, 1);
-
-  // ===== ARMS (one pushing forward, one pulling back) =====
-  // Push arm (extended forward)
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 23 + bodyLean, py + 17, 2, 10);
-
-  // Pull arm (pulling back)
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 3 + bodyLean, py + 18, 2, 9);
-
-  // ===== WRENCH (idle on back during push) =====
-  graphics.fillStyle(0xcc6600, 1);
-  graphics.fillRect(px + 25 + bodyLean, py + 12, 2, 2);
-
-  // ===== LEGS (walking rhythm with block) =====
-  const leftLegForward = pushPhase < 2;
-  if (leftLegForward) {
-    // Left foot slightly forward
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 8, py + 28, 3, 10);
-    // Right foot slightly back
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 17, py + 30, 3, 8);
+  // Legs walking with block
+  g.fillStyle(PAL.pants, 1);
+  if (step) {
+    g.fillRect(px + 8,  py + 29, 5, 11);
+    g.fillRect(px + 15, py + 31, 5, 7);
   } else {
-    // Right foot forward
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 17, py + 28, 3, 10);
-    // Left foot back
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 8, py + 30, 3, 8);
+    g.fillRect(px + 8,  py + 31, 5, 7);
+    g.fillRect(px + 15, py + 29, 5, 11);
   }
+  drawBoots(g, px + 7, py + 40, py + 38);
 
-  // ===== SHOES =====
-  graphics.fillStyle(0x333333, 1);
-  graphics.fillRect(px + 8, py + 38, 3, 2);
-  graphics.fillRect(px + 17, py + 38, 3, 2);
+  // Both arms extended forward (pushing)
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 22 + lean, py + 18, 4, 5);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 24 + lean, py + 23, 3, 3);
+
+  // Back arm bracing
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 3 + lean, py + 20, 3, 5);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 3 + lean, py + 25, 3, 2);
 }
 
-/**
- * Draw character jumping
- * jumpPhase: 0 = takeoff (legs bent), 1 = apex (legs tucked)
- */
-function drawJumpingCharacter(graphics, px, py, W, H, jumpPhase) {
-  const cx = px + W / 2;
-  const cy = py + H / 2;
+function drawJump(g, fi, W, H, phase) {
+  const { x: px, y: py } = gp(fi, W, H);
+  const apex = phase === 1;
+  const by = apex ? -2 : 0;
 
-  const isApex = jumpPhase === 1;
-  const bodyYOffset = isApex ? -2 : 0;
-
-  // ===== BODY =====
-  // Khaki pants
-  graphics.fillStyle(0xc9a961, 1); // khaki
-  graphics.fillRect(px + 9, py + 26 + bodyYOffset, 10, isApex ? 8 : 12);
-
-  // Blue shirt
-  graphics.fillStyle(0x2563eb, 1); // blue
-  graphics.fillRect(px + 7, py + 14 + bodyYOffset, 14, 13);
+  drawHat(g, px, py + by, 0);
+  drawFace(g, px, py + by, 'happy');
 
   // Neck
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 12, py + 12 + bodyYOffset, 4, 3);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 12, py + 15 + by, 4, 2);
 
-  // ===== HEAD =====
-  graphics.fillStyle(0xf5deb3, 1); // skin
-  graphics.fillRect(px + 9, py + 4 + bodyYOffset, 10, 8);
+  drawShirt(g, px, py + by, 0);
+  drawBelt(g, px, py + by);
 
-  // ===== HAIR (wind-swept up) =====
-  graphics.fillStyle(0xffff00, 1); // yellow
-  graphics.fillRect(px + 8, py + 0 + bodyYOffset, 2, 5);
-  graphics.fillRect(px + 11, py + -1 + bodyYOffset, 2, 6);
-  graphics.fillRect(px + 14, py + 0 + bodyYOffset, 2, 5);
-  graphics.fillRect(px + 17, py + 1 + bodyYOffset, 2, 4);
-
-  // ===== FACE (excited/determined) =====
-  graphics.fillStyle(0x000000, 1); // eyes
-  graphics.fillRect(px + 11, py + 7 + bodyYOffset, 1, 1);
-  graphics.fillRect(px + 15, py + 7 + bodyYOffset, 1, 1);
-
-  // Cheeks (excited)
-  graphics.fillStyle(0xff6b6b, 1);
-  graphics.fillRect(px + 9, py + 8 + bodyYOffset, 2, 1);
-  graphics.fillRect(px + 17, py + 8 + bodyYOffset, 2, 1);
-
-  // ===== ARMS =====
-  if (isApex) {
-    // Both arms extended upward
-    graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillRect(px + 4, py + 12 + bodyYOffset, 2, 10);
-    graphics.fillRect(px + 22, py + 12 + bodyYOffset, 2, 10);
+  // Legs tucked or extended
+  g.fillStyle(PAL.pants, 1);
+  if (apex) {
+    g.fillRect(px + 8,  py + 29 + by, 5, 8);
+    g.fillRect(px + 15, py + 29 + by, 5, 8);
+    drawBoots(g, px + 7, py + 37 + by, py + 37 + by);
   } else {
-    // Arms extended upward (takeoff)
-    graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillRect(px + 5, py + 10 + bodyYOffset, 2, 12);
-    graphics.fillRect(px + 21, py + 10 + bodyYOffset, 2, 12);
+    g.fillRect(px + 8,  py + 29, 5, 9);
+    g.fillRect(px + 15, py + 29, 5, 9);
+    drawBoots(g, px + 7, py + 38, py + 38);
   }
 
-  // ===== WRENCH (swinging from jump momentum) =====
-  graphics.fillStyle(0xcc6600, 1);
-  graphics.fillRect(px + 25, py + 14 + bodyYOffset, 2, 2);
+  // Arms up
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 3, py + 14 + by, 3, 6);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 3, py + 12 + by, 3, 3);
 
-  // ===== LEGS =====
-  if (isApex) {
-    // Legs tucked
-    graphics.fillStyle(0xc9a961, 1);
-    graphics.fillRect(px + 9, py + 34 + bodyYOffset, 10, 4);
-  } else {
-    // Legs pressing down (takeoff)
-    graphics.fillStyle(0xc9a961, 1);
-    // Left leg
-    graphics.fillRect(px + 8, py + 34 + bodyYOffset, 3, 4);
-    // Right leg
-    graphics.fillRect(px + 17, py + 34 + bodyYOffset, 3, 4);
-  }
-
-  // ===== SHOES =====
-  graphics.fillStyle(0x333333, 1);
-  graphics.fillRect(px + 8, py + isApex ? 37 : 38 + bodyYOffset, 3, 2);
-  graphics.fillRect(px + 17, py + isApex ? 37 : 38 + bodyYOffset, 3, 2);
+  // Right arm up with cord
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 22, py + 14 + by, 3, 6);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 22, py + 12 + by, 3, 3);
+  drawCordPlug(g, px + 24, py + 13 + by);
 }
 
-/**
- * Draw character falling/airborne
- */
-function drawFallingCharacter(graphics, px, py, W, H) {
-  const cx = px + W / 2;
-  const cy = py + H / 2;
+function drawFall(g, fi, W, H) {
+  const { x: px, y: py } = gp(fi, W, H);
 
-  // ===== BODY =====
-  // Khaki pants
-  graphics.fillStyle(0xc9a961, 1); // khaki
-  graphics.fillRect(px + 9, py + 28, 10, 10);
-
-  // Blue shirt
-  graphics.fillStyle(0x2563eb, 1); // blue
-  graphics.fillRect(px + 7, py + 15, 14, 13);
+  drawHat(g, px, py, 0);
+  drawFace(g, px, py, 'surpris');
 
   // Neck
-  graphics.fillStyle(0xf5deb3, 1);
-  graphics.fillRect(px + 12, py + 13, 4, 3);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 12, py + 15, 4, 2);
 
-  // ===== HEAD =====
-  graphics.fillStyle(0xf5deb3, 1); // skin
-  graphics.fillRect(px + 9, py + 5, 10, 8);
+  drawShirt(g, px, py, 0);
+  drawBelt(g, px, py);
 
-  // ===== HAIR (wild/tousled falling) =====
-  graphics.fillStyle(0xffff00, 1); // yellow
-  graphics.fillRect(px + 8, py + 2, 2, 3);
-  graphics.fillRect(px + 11, py + 0, 2, 5);
-  graphics.fillRect(px + 14, py + 1, 3, 4);
-  graphics.fillRect(px + 17, py + 2, 2, 3);
+  // Legs splayed
+  g.fillStyle(PAL.pants, 1);
+  g.fillRect(px + 6,  py + 29, 5, 10);
+  g.fillRect(px + 17, py + 30, 5, 9);
 
-  // ===== FACE (surprised/concerned) =====
-  graphics.fillStyle(0x000000, 1); // wide eyes
-  graphics.fillRect(px + 11, py + 6, 1, 2);
-  graphics.fillRect(px + 15, py + 6, 1, 2);
+  // Boots
+  g.fillStyle(PAL.boot, 1);
+  g.fillRect(px + 5, py + 39, 4, 3);
+  g.fillRect(px + 17, py + 39, 4, 3);
+  g.fillStyle(PAL.bootSole, 1);
+  g.fillRect(px + 5, py + 42, 5, 1);
+  g.fillRect(px + 17, py + 42, 5, 1);
 
-  // Cheeks (less red when falling)
-  graphics.fillStyle(0xff9999, 1);
-  graphics.fillRect(px + 9, py + 8, 1, 1);
-  graphics.fillRect(px + 17, py + 8, 1, 1);
+  // Arms splayed out
+  g.fillStyle(PAL.shirt, 1);
+  g.fillRect(px + 1, py + 17, 5, 3);
+  g.fillRect(px + 22, py + 17, 5, 3);
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 1, py + 20, 2, 2);
+  g.fillRect(px + 25, py + 20, 2, 2);
 
-  // ===== ARMS (splayed) =====
-  graphics.fillStyle(0xf5deb3, 1);
-  // Left arm splayed out
-  graphics.fillRect(px + 2, py + 17, 4, 2);
-  // Right arm splayed out
-  graphics.fillRect(px + 22, py + 17, 4, 2);
-
-  // ===== WRENCH (floating away) =====
-  graphics.fillStyle(0xcc6600, 1);
-  graphics.fillRect(px + 25, py + 25, 2, 2);
-
-  // ===== LEGS (splayed) =====
-  graphics.fillStyle(0xc9a961, 1);
-  // Left leg spread
-  graphics.fillRect(px + 5, py + 30, 3, 8);
-  // Right leg spread
-  graphics.fillRect(px + 20, py + 32, 3, 8);
-
-  // ===== SHOES =====
-  graphics.fillStyle(0x333333, 1);
-  graphics.fillRect(px + 5, py + 38, 3, 2);
-  graphics.fillRect(px + 20, py + 40, 3, 2);
+  // Cord flying
+  drawCordPlug(g, px + 25, py + 21);
 }
