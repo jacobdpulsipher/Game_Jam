@@ -5,6 +5,7 @@ import { Generator } from '../entities/Generator.js';
 import { Terminal } from '../entities/Terminal.js';
 import { ExtensionCord } from '../entities/ExtensionCord.js';
 import { Spikes } from '../entities/Spikes.js';
+import { Enemy } from '../entities/Enemy.js';
 import { SlideDoor } from '../puzzles/SlideDoor.js';
 import { PushBlock } from '../puzzles/PushBlock.js';
 import { Elevator } from '../puzzles/Elevator.js';
@@ -154,6 +155,28 @@ export class GameScene extends Phaser.Scene {
       this._generatorSystem.registerElement(s.id, spike);
     }
 
+    // ── Enemies ──
+    this._enemies = [];
+    for (const e of (data.enemies || [])) {
+      const enemy = new Enemy(this, {
+        x: e.x, y: e.y,
+        speed: e.speed,
+        rangeLeft: e.rangeLeft,
+        rangeRight: e.rangeRight,
+        direction: e.direction,
+        width: e.width,
+        height: e.height,
+        label: e.label,
+        id: e.id,
+      });
+      this._enemies.push(enemy);
+    }
+
+    // ── Cord Plug Kill Zone ── (invisible zone that follows the dangling plug)
+    this._plugZone = this.add.zone(0, 0, 12, 12);
+    this.physics.add.existing(this._plugZone, false); // dynamic so it can move
+    this._plugZone.body.setAllowGravity(false);
+
     // Register all puzzle elements with GeneratorSystem for auto-activation
     for (const door of this._doors) {
       this._generatorSystem.registerElement(door.elementId, door);
@@ -232,6 +255,16 @@ export class GameScene extends Phaser.Scene {
         return block.inForeground && !block.isGrabbed;
       });
 
+      // Block collides with doors
+      for (const door of this._doors) {
+        this.physics.add.collider(block, door);
+      }
+
+      // Block collides with elevators
+      for (const elev of this._elevators) {
+        this.physics.add.collider(block, elev);
+      }
+
       // Block collides with drawbridge bodies
       for (const bridge of this._drawbridges) {
         this.physics.add.collider(block, bridge.bridgeBody);
@@ -242,6 +275,29 @@ export class GameScene extends Phaser.Scene {
     for (const spike of this._spikes) {
       this.physics.add.overlap(this.player, spike, () => {
         if (spike.isDangerous) this.player.die();
+      }, null, this);
+    }
+
+    // Enemy collisions
+    for (const enemy of this._enemies) {
+      // Enemies collide with platforms so they walk on ground
+      this.physics.add.collider(enemy, this.platforms);
+
+      // Enemies collide with doors
+      for (const door of this._doors) {
+        this.physics.add.collider(enemy, door);
+      }
+
+      // Player overlaps enemy → die (if enemy is alive)
+      this.physics.add.overlap(this.player, enemy, () => {
+        if (enemy.isDangerous) this.player.die();
+      }, null, this);
+
+      // Plug zone overlaps enemy → kill enemy (only when cord is NOT connected)
+      this.physics.add.overlap(this._plugZone, enemy, () => {
+        if (enemy.isDangerous && !this.player.cordConnectedTerminal && !this.player._isDead) {
+          enemy.kill();
+        }
       }, null, this);
     }
 
@@ -303,6 +359,25 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     if (this.player) this.player.update();
     if (this.extensionCord) this.extensionCord.update(this.player);
+
+    // Update enemies
+    for (const enemy of this._enemies) {
+      if (enemy.active) enemy.update();
+    }
+
+    // Update plug kill-zone position:
+    // When cord is NOT connected, the plug dangles near the player.
+    // When cord IS connected, move the zone off-screen (disabled).
+    if (this._plugZone) {
+      if (this.player && !this.player.cordConnectedTerminal && !this.player._isDead) {
+        // Plug follows player — slightly in front, at waist height
+        const offsetX = this.player.facingRight ? 20 : -20;
+        this._plugZone.setPosition(this.player.x + offsetX, this.player.y + 10);
+      } else {
+        // Move off-screen when cord is in use or player is dead
+        this._plugZone.setPosition(-999, -999);
+      }
+    }
 
     // Elevator rider logic — carry the player along with moving elevators
     for (const elev of this._elevators) {
@@ -427,14 +502,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   _handleAction(player) {
-    // If already connected, try to disconnect at the same terminal
+    // If already connected, only allow disconnecting at the same terminal
     if (player.cordConnectedTerminal) {
       const ct = player.cordConnectedTerminal;
       if (ct.isPlayerInRange(player)) {
         player.disconnectCord();
         this.events.emit('cord-changed', null);
-        return;
       }
+      // Cord is in use — must unplug first before connecting elsewhere
+      return;
     }
 
     // Try to connect to nearest in-range terminal

@@ -170,10 +170,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   /** Connect cord to a terminal. */
   connectTo(terminal) {
-    // Disconnect previous if any
-    if (this.cordConnectedTerminal) {
-      this.cordConnectedTerminal.setPowered(false);
-    }
+    // Should never be called while already connected — caller must enforce
+    if (this.cordConnectedTerminal) return;
     this.cordConnectedTerminal = terminal;
     terminal.setPowered(true);
   }
