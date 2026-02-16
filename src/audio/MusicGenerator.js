@@ -486,7 +486,7 @@ function generateElectricitySound() {
   }
   
   // Add some "crackle" with rapid alternating high notes
-  const crackle = [NOTES.G6, NOTES.E6, NOTES.G6, NOTES.D6];
+  const crackle = [NOTES.G6, NOTES.E6, NOTES.G6, NOTES.C6];
   for (let note of crackle) {
     synthTrack.addNote(0, note, 2); // Channel 0, even shorter for crackle effect
   }
@@ -549,7 +549,7 @@ export async function generateAllTracks() {
     saveMidiFile(victoryTheme, 'victory-theme.mid');
     
     // Generate Electricity Sound Effect
-    console.log('⚡ Electricity Sound Effect (200 BPM, ~1 second)');
+    console.log('⚡ Electricity Sound Effect (200 BPM, ~0.3 seconds)');
     const electricitySound = generateElectricitySound();
     saveMidiFile(electricitySound, 'electricity-sfx.mid');
     

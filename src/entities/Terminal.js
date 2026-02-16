@@ -44,10 +44,12 @@ export class Terminal extends Phaser.Physics.Arcade.Sprite {
    * Set powered state. Called by Player.connectTo() / Player.disconnectCord().
    */
   setPowered(value) {
-    this.powered = value;
+    // Only play sound if state actually changes
+    if (this.powered !== value) {
+      music.playElectricity();
+    }
     
-    // Play electricity zap sound effect
-    music.playElectricity();
+    this.powered = value;
     
     // Swap texture to outlet on/off or fallback
     if (this._useOutletTexture) {
