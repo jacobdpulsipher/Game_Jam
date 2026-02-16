@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Everything Is Connected</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+  <div id="error-display" style="position:fixed;top:10px;left:10px;right:10px;color:#ff3333;font-family:monospace;font-size:14px;z-index:99999;white-space:pre-wrap;pointer-events:none;"></div>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      document.getElementById('error-display').textContent += 'ERROR: ' + msg + '\nat ' + url + ':' + line + '\n' + (err && err.stack ? err.stack : '') + '\n\n';
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      document.getElementById('error-display').textContent += 'UNHANDLED: ' + e.reason + '\n\n';
+    });
+  </script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
