@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TERMINAL } from '../config.js';
+import { music } from '../audio/ProceduralMusic.js';
 
 /**
  * Terminal — a plug point on a puzzle element.
@@ -43,7 +44,13 @@ export class Terminal extends Phaser.Physics.Arcade.Sprite {
    * Set powered state. Called by Player.connectTo() / Player.disconnectCord().
    */
   setPowered(value) {
+    // Only play sound if state actually changes
+    if (this.powered !== value) {
+      music.playElectricity();
+    }
+    
     this.powered = value;
+    
     // Swap texture to outlet on/off or fallback
     if (this._useOutletTexture) {
       this.setTexture(value ? 'outlet_on' : 'outlet_off');

@@ -5,6 +5,7 @@
  * 1. Menu Theme - upbeat signature theme (75 seconds)
  * 2. Level Theme - energetic loopable gameplay music (140 seconds)
  * 3. Victory Theme - triumphant fanfare (28 seconds)
+ * 4. Electricity Sound Effect - short electrical zap for terminal interactions
  * 
  * Requirements: npm install jsmidgen
  * Usage: node src/audio/MusicGenerator.js
@@ -32,8 +33,8 @@ if (!existsSync(OUTPUT_DIR)) {
 async function initializeMidi() {
   try {
     const jsmidgen = await import('jsmidgen');
-    Midi = jsmidgen.Midi;
-    Track = jsmidgen.Track;
+    Midi = jsmidgen.default.File;
+    Track = jsmidgen.default.Track;
     console.log('✓ jsmidgen loaded successfully');
     return true;
   } catch (error) {
@@ -71,10 +72,10 @@ const DRUMS = {
  */
 function generateMenuTheme() {
   const file = new Midi();
-  file.header.setTempo(150);
   
   // Lead melody track - Synth Brass tone
   const leadTrack = new Track();
+  leadTrack.setTempo(150); // BPM set on first track
   leadTrack.setInstrument(61); // Synth Brass 1
   leadTrack.setVolume(100);
   
@@ -233,9 +234,9 @@ function generateMenuTheme() {
  */
 function generateLevelTheme() {
   const file = new Midi();
-  file.header.setTempo(155);
   
   const leadTrack = new Track();
+  leadTrack.setTempo(155); // BPM set on first track
   leadTrack.setInstrument(80); // Square wave synthesizer
   leadTrack.setVolume(100);
   
@@ -372,9 +373,9 @@ function generateLevelTheme() {
  */
 function generateVictoryTheme() {
   const file = new Midi();
-  file.header.setTempo(160);
   
   const leadTrack = new Track();
+  leadTrack.setTempo(160); // BPM set on first track
   leadTrack.setInstrument(56); // Trumpet
   leadTrack.setVolume(110);
   
@@ -456,6 +457,46 @@ function generateVictoryTheme() {
 }
 
 /**
+ * Generate Electricity Sound Effect - Short electrical zap for terminal interactions
+ * Structure: Quick burst (~0.3 seconds)
+ * BPM: 200
+ */
+function generateElectricitySound() {
+  const file = new Midi();
+  
+  // Synth track - Charang synth for electrical sound
+  const synthTrack = new Track();
+  synthTrack.setTempo(200); // BPM set on first track
+  synthTrack.setInstrument(0, 84); // Channel 0, Charang instrument - bright, piercing synth
+  
+  // Quick ascending chromatic burst (electric charge-up)
+  const zapSequence = [
+    NOTES.C5, NOTES.D5, NOTES.E5, NOTES.F5,
+    NOTES.G5, NOTES.A5, NOTES.B5, NOTES.C6,
+  ];
+  
+  for (let note of zapSequence) {
+    synthTrack.addNote(0, note, 3); // Channel 0, very short duration (3 ticks)
+  }
+  
+  // Quick descending sequence for "release" (electric discharge)
+  const releaseSequence = [NOTES.C6, NOTES.A5, NOTES.F5, NOTES.C5];
+  for (let note of releaseSequence) {
+    synthTrack.addNote(0, note, 3); // Channel 0, very short duration
+  }
+  
+  // Add some "crackle" with rapid alternating high notes
+  const crackle = [NOTES.G6, NOTES.E6, NOTES.G6, NOTES.C6];
+  for (let note of crackle) {
+    synthTrack.addNote(0, note, 2); // Channel 0, even shorter for crackle effect
+  }
+  
+  file.addTrack(synthTrack);
+  
+  return file;
+}
+
+/**
  * Save MIDI file
  */
 function saveMidiFile(midiFile, filename) {
@@ -507,6 +548,11 @@ export async function generateAllTracks() {
     const victoryTheme = generateVictoryTheme();
     saveMidiFile(victoryTheme, 'victory-theme.mid');
     
+    // Generate Electricity Sound Effect
+    console.log('⚡ Electricity Sound Effect (200 BPM, ~0.3 seconds)');
+    const electricitySound = generateElectricitySound();
+    saveMidiFile(electricitySound, 'electricity-sfx.mid');
+    
     console.log('\n✅ All music files generated successfully!');
     console.log(`📁 Output directory: ${OUTPUT_DIR}\n`);
     
@@ -528,4 +574,5 @@ export {
   generateMenuTheme,
   generateLevelTheme,
   generateVictoryTheme,
+  generateElectricitySound,
 };
