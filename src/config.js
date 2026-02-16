@@ -48,7 +48,7 @@ export const TERMINAL = {
 /** Slide door */
 export const DOOR = {
   SLIDE_SPEED: 120,
-  WIDTH: 32,
+  WIDTH: 64,
   HEIGHT: 128,           // tall door
   COLOR: 0x8855aa,       // purple
   COLOR_OPEN: 0x442266,
@@ -56,7 +56,7 @@ export const DOOR = {
 
 /** Push block (2.5D) */
 export const PUSH_BLOCK = {
-  SIZE: 48,
+  SIZE: 72,
   PUSH_SPEED: 80,
   COLOR_BG: 0x666666,    // when in background
   COLOR_FG: 0x999999,    // when grabbed / foreground

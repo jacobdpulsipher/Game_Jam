@@ -384,6 +384,7 @@ export function initializeAssetTextures(scene) {
   generateDrawbridge(scene, 128, 16);
   
   // Generate standard crate size
+  generateWoodenCrate(scene, 72);
   generateWoodenCrate(scene, 48);
   generateWoodenCrate(scene, 32);
   
