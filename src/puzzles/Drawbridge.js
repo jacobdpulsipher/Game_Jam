@@ -35,7 +35,7 @@ export class Drawbridge extends Phaser.GameObjects.Sprite {
     const h     = opts.height   ?? DRAWBRIDGE.HEIGHT;
     const speed = opts.speed    ?? DRAWBRIDGE.SPEED;
     const dir   = opts.direction ?? 'right';
-    const label = opts.label    ?? 'DB';
+    // labels removed
 
     // Generate a wooden plank texture with metal reinforcements
     const key = `drawbridge_${w}x${h}`;
@@ -112,11 +112,6 @@ export class Drawbridge extends Phaser.GameObjects.Sprite {
     this.bridgeBody = scene.add.rectangle(bodyX, bodyY, w, bodyH, 0x000000, 0);
     scene.physics.add.existing(this.bridgeBody, true); // static
     this.bridgeBody.body.enable = false; // start disabled (bridge is down)
-
-    // Debug label
-    this._label = scene.add.text(opts.pivotX, opts.pivotY - 16, label, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#c84',
-    }).setOrigin(0.5);
 
     this.setDepth(5);
   }

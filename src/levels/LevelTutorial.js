@@ -1,4 +1,4 @@
-import { GAME_HEIGHT, DOOR, ELEVATOR, DRAWBRIDGE, ENEMY, PUSH_BLOCK } from '../config.js';
+import { GAME_HEIGHT, DOOR, ELEVATOR, DRAWBRIDGE, ENEMY, PUSH_BLOCK, SPIKES } from '../config.js';
 
 /**
  * Tutorial — eight self-contained mini-levels, one per mechanic.
@@ -7,9 +7,40 @@ import { GAME_HEIGHT, DOOR, ELEVATOR, DRAWBRIDGE, ENEMY, PUSH_BLOCK } from '../c
  */
 
 // ── Shared constants ────────────────────────────────────────────
-const W   = 600;          // small world width for each mini level
+const W   = 800;          // world width for each mini level
 const FY  = 550;          // floor Y
 const GH  = GAME_HEIGHT;
+
+// ── Shared wall / visual helpers ────────────────────────────────
+const WALL_W = 120;       // wide skyscraper wall
+
+// Standard wall platforms (skyscraper-styled)
+const STD_LEFT_WALL  = { x: WALL_W / 2,     y: GH / 2, width: WALL_W, height: GH, style: 'skyscraper' };
+const STD_RIGHT_WALL = { x: W - WALL_W / 2, y: GH / 2, width: WALL_W, height: GH, style: 'skyscraper' };
+
+// Player / generator standard positions (inside the playable area)
+const G1_X  = WALL_W + 20;        // 140
+const G2_X  = W - WALL_W - 20;    // 660
+const PL_X  = WALL_W + 50;        // 170
+
+// Midground buildings shared by every standard-width tutorial level
+const STD_MIDGROUND = [
+  // Building the player stands on — visible below the rooftop floor
+  { x: WALL_W, y: FY, width: W - WALL_W * 2, height: 300, color: 0x2e2222,
+    roofDetails: [
+      { type: 'ac', offsetX: 30 },
+      { type: 'pipes', offsetX: 300, width: 20 },
+    ],
+  },
+];
+
+// Standard lampposts
+const STD_LAMPPOSTS = [{ x: 350, y: FY }];
+
+// Standard decorations
+const STD_DECORATIONS = [
+  { type: 'puddle', x: 500, y: FY, width: 22 },
+];
 
 // ═════════════════════════════════════════════════════════════════
 //  Tutorial 1 — Movement
@@ -23,13 +54,13 @@ export const TUT_01 = {
   bgColor: '#1a1a2e',
   platforms: [
     { x: W / 2, y: FY + 16, width: W, height: 32 },
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: G2_X,  y: FY - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [],
   doors: [],
@@ -38,17 +69,28 @@ export const TUT_01 = {
   enemies: [],
   pushBlocks: [],
   spikes: [],
-  goal: { x: W - 60, y: FY - 20 },
+  goal: { x: G2_X, y: FY - 20 },
+  midgroundBuildings: STD_MIDGROUND,
+  lampposts: [{ x: 400, y: FY }],
+  decorations: [{ type: 'puddle', x: 550, y: FY, width: 22 }],
   tutorialPopups: [
     {
       id: 'tut1_move',
-      x: 120, y: FY - 60, width: 200, height: 120,
+      x: PL_X, y: FY - 60, width: 200, height: 120,
       title: 'Movement',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Use  A / D  or  ← / →  to walk.',
-        'Head right to the generator!',
+        '—kshhh— You read me, kid?',
+        'Name’s Voltage Jack.', 
+        'And you are my lucky apprentice!',
+        'Sorry I can’t be there in person—',
+        'they said I’m a “safety risk.” Ha!',
+        'Rule #1 of being an electrician:',
+        'NEVER forget your extension cord.',
+        'That tether? That’s your lifeline',
+        'I’ll be on the radio talking you through',
+        'Now use the arrow keys to go fix that generator!',
       ],
     },
   ],
@@ -66,15 +108,15 @@ export const TUT_02 = {
   bgColor: '#1a1a2e',
   platforms: [
     { x: W / 2, y: FY + 16, width: W, height: 32 },
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
     // Wall obstacle
-    { x: W / 2, y: FY - 24, width: 24, height: 48 },
+    { x: W / 2, y: FY - 24, width: 24, height: 48, style: 'chimney' },
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: G2_X,  y: FY - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [],
   doors: [],
@@ -83,17 +125,23 @@ export const TUT_02 = {
   enemies: [],
   pushBlocks: [],
   spikes: [],
-  goal: { x: W - 60, y: FY - 20 },
+  goal: { x: G2_X, y: FY - 20 },
+  midgroundBuildings: STD_MIDGROUND,
+  lampposts: STD_LAMPPOSTS,
+  decorations: STD_DECORATIONS,
   tutorialPopups: [
     {
       id: 'tut2_jump',
       x: W / 2 - 80, y: FY - 60, width: 120, height: 120,
       title: 'Jumping',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Press  SPACE  or  W  to jump.',
-        'Hop over the wall!',
+        'Calm down, kid. That was nothing!',
+        'City\'s a zoo! All sorts of stuff to climb over',
+        'Press  SPACE  or  UP  to jump.',
+        'Hop over the wall. Try not to make it mad.',
+        'City work’s 10% wiring, 90% parkour.',
       ],
     },
   ],
@@ -115,14 +163,14 @@ export const TUT_03 = {
     { x: W / 2, y: FY + 16, width: W, height: 32 },
     // Elevated ledge on the right — too high to reach by jumping alone
     { x: 460, y: T3_LEDGE_Y + 16, width: 260, height: 32 },
-    // Walls
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    // Skyscraper walls
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20,       label: 'G1', isPrimary: true },
-    { id: 'g2', x: 500,   y: T3_LEDGE_Y - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20,        label: 'G1', isPrimary: true },
+    { id: 'g2', x: 580,   y: T3_LEDGE_Y - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [],
   doors: [],
@@ -133,19 +181,31 @@ export const TUT_03 = {
     { id: 'block1', x: 240, y: FY - PUSH_BLOCK.SIZE / 2 },
   ],
   spikes: [],
-  goal: { x: 500, y: T3_LEDGE_Y - 20 },
+  goal: { x: 580, y: T3_LEDGE_Y - 20 },
+  midgroundBuildings: [
+    ...STD_MIDGROUND,
+    // Building under the elevated ledge
+    { x: 400, y: T3_LEDGE_Y, width: 300, height: 400, color: 0x22191a,
+      roofDetails: [{ type: 'antenna', offsetX: 120 }],
+    },
+  ],
+  lampposts: STD_LAMPPOSTS,
+  decorations: STD_DECORATIONS,
   tutorialPopups: [
     {
       id: 'tut3_block',
       x: 160, y: FY - 60, width: 160, height: 120,
       title: 'Push Blocks',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Walk up to the block and press  F',
-        'to grab it. Push it to the ledge,',
-        'then jump on the block to reach',
-        'the generator above!',
+        'I get it! You can jump!',
+        'Ain\'t always that easy kid.',
+        'Some times ya need an little boost',
+        'You see that crate? Press F to grab it',
+        'Then you can drag it wherever you go',
+        'Press F again to release it.',
+        'Position it, then hop on top for a boost',
       ],
     },
   ],
@@ -153,8 +213,7 @@ export const TUT_03 = {
 
 // ═════════════════════════════════════════════════════════════════
 //  Tutorial 4 — Terminals & Doors
-//  Plug cord into terminal to open door. Push block under door
-//  to prop it, unplug, walk through the propped gap.
+//  Plug cord into terminal to open door, walk through.
 // ═════════════════════════════════════════════════════════════════
 const T4_TERM = 220;
 const T4_DOOR = 300;
@@ -166,13 +225,13 @@ export const TUT_04 = {
   bgColor: '#1a1a2e',
   platforms: [
     { x: W / 2, y: FY + 16, width: W, height: 32 },
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: G2_X,  y: FY - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [
     { id: 't_door', x: T4_TERM, y: FY - 16, linkTo: 'door1' },
@@ -183,23 +242,27 @@ export const TUT_04 = {
   drawbridges: [],
   elevators: [],
   enemies: [],
-  pushBlocks: [
-    { id: 'block1', x: 160, y: FY - PUSH_BLOCK.SIZE / 2 },
-  ],
+  pushBlocks: [],
   spikes: [],
-  goal: { x: W - 60, y: FY - 20 },
+  goal: { x: G2_X, y: FY - 20 },
+  midgroundBuildings: STD_MIDGROUND,
+  lampposts: [{ x: 520, y: FY }],
+  decorations: [{ type: 'steam_vent', x: 600, y: FY }],
   tutorialPopups: [
     {
       id: 'tut4_door',
-      x: 140, y: FY - 60, width: 180, height: 120,
+      x: PL_X, y: FY - 60, width: 180, height: 120,
       title: 'Terminals & Doors',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Press  E  at the red terminal',
-        'to plug in — the door opens!',
-        'Push the block under the door,',
-        'then unplug (E) and walk through.',
+        'City planners leave doors in the darnest places!',
+        'That\'s why we always got our extension cord handy',
+        'Press D to plug that puppy into the outlet',
+        'And get this door open.',
+        'Once through, go fix that generator.',
+        'You can leave the cord behind. Got plenty more for ya',
+        'Get to it! Mimi\'s Cafe closes at 7:00!',        
       ],
     },
   ],
@@ -209,12 +272,11 @@ export const TUT_04 = {
 //  Tutorial 5 — Drawbridge
 //  Plug cord to swing a drawbridge across a gap.
 // ═════════════════════════════════════════════════════════════════
-const T5_W      = 700;
-const T5_TERM   = 200;
-const T5_GAP_L  = 260;
-const T5_GAP_R  = 440;
+const T5_W      = 900;
+const T5_TERM   = 260;
+const T5_GAP_L  = 340;
+const T5_GAP_R  = 540;
 const T5_GAP_W  = T5_GAP_R - T5_GAP_L;
-const T5_PIT_Y  = 640;           // shallow pit floor surface
 export const TUT_05 = {
   id: 'tut_5',
   name: 'Tutorial: Drawbridge',
@@ -226,16 +288,14 @@ export const TUT_05 = {
     { x: T5_GAP_L / 2, y: FY + 16, width: T5_GAP_L, height: 32 },
     // Right floor
     { x: (T5_GAP_R + T5_W) / 2, y: FY + 16, width: T5_W - T5_GAP_R, height: 32 },
-    // Shallow pit floor (block + jump can escape)
-    { x: (T5_GAP_L + T5_GAP_R) / 2, y: T5_PIT_Y + 16, width: T5_GAP_W + 40, height: 32 },
-    // Walls
-    { x: 8,       y: GH / 2, width: 16, height: GH },
-    { x: T5_W - 8, y: GH / 2, width: 16, height: GH },
+    // Skyscraper walls
+    { x: WALL_W / 2,      y: GH / 2, width: WALL_W, height: GH, style: 'skyscraper' },
+    { x: T5_W - WALL_W / 2, y: GH / 2, width: WALL_W, height: GH, style: 'skyscraper' },
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,      y: FY - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: T5_W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,          y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: T5_W - WALL_W - 20, y: FY - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [
     { id: 't_bridge', x: T5_TERM, y: FY - 16, linkTo: 'bridge1' },
@@ -252,24 +312,41 @@ export const TUT_05 = {
   ],
   elevators: [],
   enemies: [],
-  pushBlocks: [
-    // Push this into the pit before crossing — safety net if you fall
-    { id: 'block1', x: 230, y: FY - PUSH_BLOCK.SIZE / 2 },
+  pushBlocks: [],
+  spikes: [
+    {
+      id: 'spikes1',
+      x: (T5_GAP_L + T5_GAP_R) / 2,
+      y: GH - SPIKES.HEIGHT / 2,
+      width: T5_GAP_W - 10,
+    },
   ],
-  spikes: [],
-  goal: { x: T5_W - 60, y: FY - 20 },
+  goal: { x: T5_W - WALL_W - 20, y: FY - 20 },
+  midgroundBuildings: [
+    // Left building (player stands on)
+    { x: WALL_W, y: FY, width: T5_GAP_L - WALL_W, height: 300, color: 0x2e2222,
+      roofDetails: [{ type: 'ac', offsetX: 20 }],
+    },
+    // Right building
+    { x: T5_GAP_R, y: FY, width: T5_W - T5_GAP_R - WALL_W, height: 300, color: 0x22191a,
+      roofDetails: [{ type: 'pipes', offsetX: 60, width: 20 }],
+    },
+  ],
+  lampposts: [{ x: 220, y: FY }, { x: T5_W - 200, y: FY }],
+  decorations: [{ type: 'steam_vent', x: T5_W - 180, y: FY }],
   tutorialPopups: [
     {
       id: 'tut5_bridge',
-      x: 100, y: FY - 60, width: 170, height: 120,
+      x: PL_X, y: FY - 60, width: 170, height: 120,
       title: 'Drawbridges',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Push the block into the pit first!',
-        'Then press  E  at the terminal to',
-        'swing the bridge. If you fall, the',
-        'block lets you jump back out.',
+        'Hey, your getting the hang of this!',
+        'Don\'t let that get to your head!',
+        'Press  D  at the terminal to',
+        'swing the bridge across.',
+        'Walk over, reach the generator. Easy!',
       ],
     },
   ],
@@ -289,13 +366,13 @@ export const TUT_06 = {
   platforms: [
     { x: W / 2, y: FY + 16, width: W, height: 32 },
     { x: W / 2 + W / 4, y: T6_UPPER + 16, width: W / 2, height: 32 },
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20,     label: 'G1', isPrimary: true },
-    { id: 'g2', x: W - 60, y: T6_UPPER - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20,       label: 'G1', isPrimary: true },
+    { id: 'g2', x: G2_X,  y: T6_UPPER - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [
     { id: 't_elev', x: 220, y: FY - 16, linkTo: 'elev1' },
@@ -313,18 +390,28 @@ export const TUT_06 = {
   enemies: [],
   pushBlocks: [],
   spikes: [],
-  goal: { x: W - 60, y: T6_UPPER - 20 },
+  goal: { x: G2_X, y: T6_UPPER - 20 },
+  midgroundBuildings: [
+    ...STD_MIDGROUND,
+    // Building under the upper ledge
+    { x: W / 2, y: T6_UPPER, width: W / 2 - WALL_W, height: 500, color: 0x22191a,
+      roofDetails: [{ type: 'tank', offsetX: 60 }, { type: 'dish', offsetX: 160 }],
+    },
+  ],
+  lampposts: [{ x: 250, y: FY }],
+  decorations: [{ type: 'puddle', x: 360, y: FY, width: 20 }],
   tutorialPopups: [
     {
       id: 'tut6_elev',
       x: 170, y: FY - 60, width: 130, height: 120,
       title: 'Elevators',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Press  E  at the terminal to',
-        'power the elevator. Stand on',
-        'it to ride up!',
+        'Elevator time. The city’s favorite prank.',
+        'Press  D  at the terminal to power it.',
+        'Stand on it to ride up—nice and steady.',
+        'If it rattles, pretend you meant that.',
       ],
     },
   ],
@@ -342,13 +429,13 @@ export const TUT_07 = {
   bgColor: '#1a1a2e',
   platforms: [
     { x: W / 2, y: FY + 16, width: W, height: 32 },
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: G2_X,  y: FY - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [],
   doors: [],
@@ -357,28 +444,34 @@ export const TUT_07 = {
   enemies: [
     {
       id: 'enemy1',
-      x: 350,
+      x: 450,
       y: FY - ENEMY.HEIGHT / 2,
-      rangeLeft: 250,
-      rangeRight: 450,
+      rangeLeft: 350,
+      rangeRight: 550,
       direction: 'left',
       label: '👾',
     },
   ],
   pushBlocks: [],
   spikes: [],
-  goal: { x: W - 60, y: FY - 20 },
+  goal: { x: G2_X, y: FY - 20 },
+  midgroundBuildings: STD_MIDGROUND,
+  lampposts: [{ x: 550, y: FY }],
+  decorations: [{ type: 'steam_vent', x: 300, y: FY }],
   tutorialPopups: [
     {
       id: 'tut7_enemy',
-      x: 180, y: FY - 60, width: 120, height: 120,
+      x: 250, y: FY - 60, width: 120, height: 120,
       title: 'Enemies',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'An enemy blocks your path!',
-        'With cord unplugged, press  E',
-        'to swing your plug. ZAP!',
+        'Ah, them darn hoodlums!',
+        'Always trying their parkour crap on our turf.',
+        'Like I said, always keep that cord handy.',
+        'Press D when you get close him',
+        'Totally harmless! Just gives him a little zap.',
+        'But be careful! They bite',
       ],
     },
   ],
@@ -396,13 +489,13 @@ export const TUT_08 = {
   bgColor: '#1a1a2e',
   platforms: [
     { x: W / 2, y: FY + 16, width: W, height: 32 },
-    { x: 8,     y: GH / 2,  width: 16, height: GH },
-    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    STD_LEFT_WALL,
+    STD_RIGHT_WALL,
   ],
-  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  player: { x: PL_X, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: G1_X,  y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: G2_X,  y: FY - 20, label: 'G2', isPrimary: false },
   ],
   terminals: [],
   doors: [],
@@ -411,18 +504,24 @@ export const TUT_08 = {
   enemies: [],
   pushBlocks: [],
   spikes: [],
-  goal: { x: W - 60, y: FY - 20 },
+  goal: { x: G2_X, y: FY - 20 },
+  midgroundBuildings: STD_MIDGROUND,
+  lampposts: [{ x: 400, y: FY }],
+  decorations: [{ type: 'puddle', x: 250, y: FY, width: 25 }],
   tutorialPopups: [
     {
       id: 'tut8_goal',
-      x: 120, y: FY - 60, width: 250, height: 120,
+      x: PL_X, y: FY - 60, width: 250, height: 120,
       title: 'The Goal',
-      speakerName: 'Mentor',
+      speakerName: 'Voltage Jack',
       portraitKey: 'mentor_face',
       lines: [
-        'Every level has a broken Generator.',
-        'Reach it to repair it and restore',
-        'power — that\'s how you win!',
+        'Okay, maybe a little more than a zap,',
+        'But man! It sure is fun...',
+        'Anywho, big picture, apprentice:',
+        'You got a lot of generators to fix tonight.',
+        'Reach it to repair and restore power.',
+        'We\'re counting on ya!',
       ],
     },
   ],

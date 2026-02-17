@@ -6,8 +6,10 @@ import { generateLamppost, generateLamppostGlow } from '../assets/EnvironmentTex
 import { generateWorkerSprite } from '../assets/WorkerSprite.js';
 import { generateMentorFace } from '../assets/MentorFace.js';
 import { generateHoodlumSprite } from '../assets/HoodlumSprite.js';
+import { generateMentorSmallSprite } from '../assets/MentorSmallSprite.js';
 import sparkyJoeMenuUrl from '../assets/SparkyJoe_clean.png';
 import mentorBigUrl from '../assets/mentor_big.png';
+import mentorSmallUrl from '../assets/mentor_small.png';
 import hoodlumUrl from '../assets/hoodlum.png';
 
 // Relative crop box (0..1) into mentor_big to create a zoomed bust portrait.
@@ -29,6 +31,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // Load mentor portrait for tutorial radio popups
     this.load.image('mentor_big', mentorBigUrl);
+
+    // Load mentor small sprite source (white bg removed at runtime)
+    this.load.image('mentor_small_src', mentorSmallUrl);
 
     // Load hoodlum base pose (used to build the animated enemy sheet)
     this.load.image('hoodlum_src', hoodlumUrl);
@@ -114,6 +119,11 @@ export class PreloadScene extends Phaser.Scene {
           repeat: hoodlumData.animations.walk.repeat,
         });
       }
+    }
+
+    // --- Generate the mentor small NPC sprite (white bg stripped) ---
+    if (this.textures.exists('mentor_small_src')) {
+      generateMentorSmallSprite(this);
     }
 
     // City-scape ground tiles (replaces plain grey 'ground' rect)

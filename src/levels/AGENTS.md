@@ -10,7 +10,8 @@ LevelRegistry.js          — ordered list of all levels + helpers (getAllLevels
 Level01.js                — "First Steps" (intro)
 Level02.js                — "Bridge the Gap" (drawbridge + spikes)
 Level03.js                — "Dead Weight" (heavy block barrier puzzle)
-Level04.js                — \"Power Climb\" (staircase ascent, block transport, E-key generator activation)\nLevel05.js                — \"Tower Descent\" (tall vertical descent)", "oldString": "Level04.js                — \"Power Cascade\" (trigger zones + cascading activations)\nLevel05.js                — \"Tower Descent\" (tall vertical descent)
+Level04.js                — "Power Climb" (staircase ascent, block transport, E-key generator activation)
+Level06.js                — "The Gauntlet" (final level)
 ```
 
 ## How It Works

@@ -28,10 +28,8 @@ export class Generator extends Phaser.Physics.Arcade.Sprite {
     // Track currently-active linked elements for deactivation
     this._activeElements = new Map(); // elementId → element
 
-    // Label
-    this._label = scene.add.text(x, y - 30, 'G', {
-      fontSize: '14px', fontFamily: 'monospace', color: this._getLabelColor(),
-    }).setOrigin(0.5);
+    // Debug/ID labels removed (visual-only)
+    this._label = null;
 
     // Glow effect for activation state (secondary only)
     this._glowGraphics = null;
@@ -87,7 +85,8 @@ export class Generator extends Phaser.Physics.Arcade.Sprite {
    * Set label text
    */
   setLabel(text) {
-    this._label.setText(text);
+    // no-op (labels removed)
+    void text;
   }
 
   /**
@@ -99,7 +98,7 @@ export class Generator extends Phaser.Physics.Arcade.Sprite {
     if (this.isPrimary) return; // primary generators don't auto-activate
 
     this.isActivated = true;
-    this._label.setColor(this._getLabelColor());
+    if (this._label) this._label.setColor(this._getLabelColor());
     this._updateGlow();
 
     // Activate all linked elements (permanently — generator power doesn't toggle)
@@ -127,7 +126,7 @@ export class Generator extends Phaser.Physics.Arcade.Sprite {
     if (this.isPrimary) return; // primary generators don't auto-deactivate
 
     this.isActivated = false;
-    this._label.setColor(this._getLabelColor());
+    if (this._label) this._label.setColor(this._getLabelColor());
     this._updateGlow();
 
     // Deactivate all currently-active linked elements

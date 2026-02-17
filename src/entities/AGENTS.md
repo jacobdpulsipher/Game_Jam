@@ -6,7 +6,7 @@ Entities are game objects with behavior — things that exist in the world and d
 ## Files
 | File              | Description |
 |-------------------|-------------|
-| `Player.js`       | The hero electrician. Handles input (WASD/Arrows/Space + E for cord + F for block grab), movement, jumping. Manages cord connection state and block grab state. Auto-releases block on jump, when airborne, or when the block starts falling. Has `die()` / respawn for hazard deaths. |
+| `Player.js`       | The hero electrician. Handles input (Arrows/Space + D for cord + F for block grab), movement, jumping. Manages cord connection state and block grab state. Auto-releases block on jump, when airborne, or when the block starts falling. Has `die()` / respawn for hazard deaths. |
 | `Generator.js`    | Static power source the hero is tethered to. The extension cord originates here. Has a configurable label. |
 | `Terminal.js`     | Plug point on a puzzle element. Player presses E near it to connect/disconnect the cord. When powered, calls `linkedElement.activate()`; when unpowered, calls `linkedElement.deactivate()`. |
 | `ExtensionCord.js`| Visual-only — draws a droopy bezier cord from the generator to either the connected terminal or the player. Also provides `isInRange(terminal)` for range checks. |
@@ -17,8 +17,8 @@ Entities are game objects with behavior — things that exist in the world and d
 ## Key Behaviors
 
 ### Player
-- **Movement:** WASD / Arrow keys, speed = `PLAYER.SPEED` (200 px/s)
-- **Jump:** W / Up / Space, velocity = `PLAYER.JUMP_VELOCITY` (-420)
+- **Movement:** Arrow keys, speed = `PLAYER.SPEED` (200 px/s)
+- **Jump:** Up / Space, velocity = `PLAYER.JUMP_VELOCITY` (-420)
 - **Cord (E key):** Plugs cord into nearest in-range terminal, or unplugs if already connected
 - **Block grab (F key):** Grabs nearby PushBlock (must be beside, not on top); released on F again, on jump, when airborne, or when block starts falling
 - **Death:** `die()` — triggered by spike overlap. Flashes red, disconnects cord, respawns at level start after 500ms

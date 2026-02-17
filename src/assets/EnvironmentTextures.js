@@ -719,6 +719,188 @@ export function generateCratePlatform(scene, width, height) {
   return key;
 }
 
+/**
+ * Generate a skyscraper / tall building platform texture.
+ * Close-up apartment-style building with brick facade, large windows,
+ * window sills, AC units, fire escape details, and weathering.
+ * Used for the side-wall "buildings" in tutorial levels.
+ *
+ * @param {Phaser.Scene} scene
+ * @param {number} width
+ * @param {number} height
+ * @returns {string} Texture key
+ */
+export function generateSkyscraperPlatform(scene, width, height) {
+  const key = `skyscraper_${width}x${height}`;
+  if (scene.textures.exists(key)) return key;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  // ── Base brick facade ──
+  // Main brick color — warm brownish-red
+  g.fillStyle(0x4a2e24, 1);
+  g.fillRect(0, 0, width, height);
+
+  // Brick pattern (horizontal courses with offset)
+  const brickW = 16;
+  const brickH = 8;
+  const mortarColor = 0x3a2018;
+  // Horizontal mortar lines
+  g.fillStyle(mortarColor, 0.5);
+  for (let by = 0; by < height; by += brickH) {
+    g.fillRect(0, by, width, 1);
+  }
+  // Vertical mortar lines (offset every other row)
+  for (let by = 0; by < height; by += brickH) {
+    const row = Math.floor(by / brickH);
+    const offset = (row % 2 === 0) ? 0 : brickW / 2;
+    g.fillStyle(mortarColor, 0.4);
+    for (let bx = offset; bx < width; bx += brickW) {
+      g.fillRect(bx, by, 1, brickH);
+    }
+  }
+
+  // Subtle brick color variation
+  for (let by = 0; by < height; by += brickH) {
+    const row = Math.floor(by / brickH);
+    const offset = (row % 2 === 0) ? 0 : brickW / 2;
+    for (let bx = offset; bx < width; bx += brickW) {
+      const hash = ((bx * 7 + by * 13) % 31);
+      if (hash < 4) {
+        // Slightly darker brick
+        g.fillStyle(0x3d2218, 0.3);
+        g.fillRect(bx + 1, by + 1, brickW - 2, brickH - 2);
+      } else if (hash < 7) {
+        // Slightly lighter / warmer brick
+        g.fillStyle(0x5a3830, 0.25);
+        g.fillRect(bx + 1, by + 1, brickW - 2, brickH - 2);
+      }
+    }
+  }
+
+  // ── Cornice / ledge at top ──
+  g.fillStyle(0x5a4a3a, 1);
+  g.fillRect(0, 0, width, 6);
+  // Decorative trim line
+  g.fillStyle(0x6a5a48, 0.8);
+  g.fillRect(0, 6, width, 2);
+  // Top highlight
+  g.fillStyle(0x7a6a58, 0.5);
+  g.fillRect(0, 0, width, 1);
+
+  // ── Side edges (darker for depth) ──
+  g.fillStyle(0x2a1a10, 0.5);
+  g.fillRect(0, 0, 3, height);
+  g.fillStyle(0x1a0e08, 0.5);
+  g.fillRect(width - 3, 0, 3, height);
+
+  // ── Windows — large, close-up style ──
+  const winW = 12;
+  const winH = 16;
+  const spacingX = Math.max(22, Math.floor(width / Math.max(1, Math.floor(width / 24))));
+  const spacingY = 32;
+  const marginX = 10;
+  const marginY = 16;
+
+  let floorRow = 0;
+  for (let wy = marginY; wy + winH < height - 10; wy += spacingY) {
+    // Occasional blank floor (mechanical band / floor divider)
+    if (floorRow > 0 && floorRow % 6 === 0) {
+      // Stone band between sections
+      g.fillStyle(0x3a3030, 0.6);
+      g.fillRect(0, wy - 2, width, 4);
+      floorRow++;
+      continue;
+    }
+    for (let wx = marginX; wx + winW < width - marginX; wx += spacingX) {
+      // Deterministic lit/unlit via position hash
+      const hash = ((wx * 3 + wy * 7) % 23);
+
+      // Window recess (slightly darker than brick)
+      g.fillStyle(0x2a1810, 0.6);
+      g.fillRect(wx - 1, wy - 1, winW + 2, winH + 2);
+
+      if (hash < 3) {
+        // Warm lit window — yellow/orange glow
+        const warm = hash === 0 ? 0x886633 : hash === 1 ? 0x7a6030 : 0x6a5528;
+        g.fillStyle(warm, 0.8);
+        g.fillRect(wx, wy, winW, winH);
+        // Curtain / blind half-drawn
+        if (hash === 1) {
+          g.fillStyle(0x554422, 0.4);
+          g.fillRect(wx, wy, winW, winH / 2);
+        }
+      } else if (hash < 6) {
+        // Bluish reflected sky
+        g.fillStyle(0x1a2a44, 0.9);
+        g.fillRect(wx, wy, winW, winH);
+      } else {
+        // Dark window
+        g.fillStyle(0x0e0e1a, 0.95);
+        g.fillRect(wx, wy, winW, winH);
+      }
+
+      // Window frame / sill
+      g.fillStyle(0x4a4040, 0.7);
+      g.fillRect(wx - 1, wy + winH, winW + 2, 2); // sill
+      g.fillRect(wx + winW / 2 - 0.5, wy, 1, winH); // center mullion
+
+      // Occasional AC unit sticking out below window
+      if (hash % 11 === 3 && wy + winH + 10 < height - 10) {
+        g.fillStyle(0x5a5a5a, 0.8);
+        g.fillRect(wx + 1, wy + winH + 2, winW - 2, 6);
+        g.fillStyle(0x4a4a4a, 0.6);
+        g.fillRect(wx + 2, wy + winH + 3, winW - 4, 1);
+        g.fillRect(wx + 2, wy + winH + 6, winW - 4, 1);
+      }
+    }
+    floorRow++;
+  }
+
+  // ── Fire escape (if wide enough) ──
+  if (width > 70) {
+    const feX = width - 22;
+    g.fillStyle(0x3a3a3a, 0.7);
+    for (let fy = marginY + spacingY; fy < height - 40; fy += spacingY) {
+      // Platform
+      g.fillRect(feX, fy, 18, 2);
+      // Railing
+      g.fillStyle(0x3a3a3a, 0.5);
+      g.fillRect(feX + 16, fy - 14, 2, 14);
+      // Ladder to next
+      g.fillStyle(0x3a3a3a, 0.4);
+      g.fillRect(feX + 6, fy + 2, 2, spacingY - 4);
+      g.fillRect(feX + 10, fy + 2, 2, spacingY - 4);
+      // Rungs
+      for (let ry = fy + 6; ry < fy + spacingY - 2; ry += 6) {
+        g.fillRect(feX + 6, ry, 6, 1);
+      }
+      g.fillStyle(0x3a3a3a, 0.7);
+    }
+  }
+
+  // ── Weathering / staining ──
+  // Water stain streaks
+  g.fillStyle(0x2a1a10, 0.15);
+  g.fillRect(Math.floor(width * 0.3), 8, 3, height * 0.4);
+  g.fillStyle(0x1a1008, 0.1);
+  g.fillRect(Math.floor(width * 0.7), 20, 2, height * 0.3);
+
+  // ── Rooftop equipment silhouettes at the top ──
+  if (width > 60) {
+    // Water tank
+    g.fillStyle(0x3a3028, 1);
+    g.fillRect(14, 8, 3, 10);
+    g.fillRect(28, 8, 3, 10);
+    g.fillRect(12, 0, 22, 8);
+    g.fillStyle(0x4a4038, 0.5);
+    g.fillRect(14, 2, 18, 2);
+  }
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+  return key;
+}
+
 export default {
   generateLamppost,
   generateLamppostGlow,
@@ -728,4 +910,5 @@ export default {
   generateACUnitPlatform,
   generateVentBoxPlatform,
   generateCratePlatform,
+  generateSkyscraperPlatform,
 };

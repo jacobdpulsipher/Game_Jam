@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../config.js';
-import { getFirstLevel, getAllLevels } from '../levels/LevelRegistry.js';
+import { getAllLevels } from '../levels/LevelRegistry.js';
 import { music } from '../audio/ProceduralMusic.js';
 
 /**
@@ -134,22 +134,8 @@ export class MenuScene extends Phaser.Scene {
     startBtn.on('pointerover', () => { startBtn.setColor('#ffffff'); startBtn.setScale(1.1); });
     startBtn.on('pointerout', () => { startBtn.setColor('#44ff44'); startBtn.setScale(1.0); });
 
-    // ── Tutorial button ──
-    const tutBtn = this.add.text(btnX, btnBaseY + 42, '⚡  TUTORIAL  ⚡', {
-      fontSize: '20px',
-      fontFamily: cartoonFont,
-      color: '#ffaa44',
-      fontStyle: 'bold',
-      stroke: '#553300',
-      strokeThickness: 2,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    tutBtn.on('pointerup', () => this._startLevel('tut_1'));
-    tutBtn.on('pointerover', () => { tutBtn.setColor('#ffffff'); tutBtn.setScale(1.1); });
-    tutBtn.on('pointerout', () => { tutBtn.setColor('#ffaa44'); tutBtn.setScale(1.0); });
-
     // ── Level Select heading ──
-    this.add.text(btnX, btnBaseY + 88, '— LEVELS —', {
+    this.add.text(btnX, btnBaseY + 48, '— LEVELS —', {
       fontSize: '16px',
       fontFamily: cartoonFont,
       color: '#8888cc',
@@ -158,7 +144,7 @@ export class MenuScene extends Phaser.Scene {
 
     // ── Level buttons ──
     const levels = getAllLevels();
-    const startY = btnBaseY + 115;
+    const startY = btnBaseY + 75;
     const spacing = 32;
 
     levels.forEach((lvl, i) => {
@@ -239,8 +225,7 @@ export class MenuScene extends Phaser.Scene {
 
   _startGame() {
     music.stop();
-    const first = getFirstLevel();
-    this.scene.start(SCENES.GAME, { levelId: first.id });
+    this.scene.start(SCENES.GAME, { levelId: 'tut_1' });
   }
 
   _startLevel(levelId) {

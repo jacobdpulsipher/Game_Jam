@@ -31,7 +31,7 @@ export class SlideDoor extends Phaser.Physics.Arcade.Sprite {
     const speed = opts.slideSpeed ?? DOOR.SLIDE_SPEED;
     const dir   = opts.direction  ?? 'up';
     const range = opts.range      ?? h;
-    const label = opts.label      ?? 'D';
+    // labels removed
 
     // Generate per-instance texture with industrial city look
     const key = `door_${w}x${h}`;
@@ -96,10 +96,6 @@ export class SlideDoor extends Phaser.Physics.Arcade.Sprite {
     /** Total range in pixels (for duration calc) */
     this._range = range;
 
-    // Debug label
-    scene.add.text(opts.x, opts.y - h / 2 - 10, label, {
-      fontSize: '14px', fontFamily: 'monospace', color: '#a5f',
-    }).setOrigin(0.5);
   }
 
   // ───── Public API ─────

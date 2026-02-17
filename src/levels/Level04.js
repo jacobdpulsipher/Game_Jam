@@ -1,4 +1,4 @@
-import { PUSH_BLOCK, ELEVATOR, TERMINAL } from '../config.js';
+import { PUSH_BLOCK, ELEVATOR, TERMINAL, SPIKES } from '../config.js';
 
 /**
  * Level 04 — "Power Climb"
@@ -128,7 +128,7 @@ function plat(left, right, surfaceY) {
 export const LEVEL_04 = {
   id: 'level_04',
   name: 'Power Climb',
-  nextLevel: 'level_05',
+  nextLevel: 'level_06',
 
   world: { width: WORLD_W, height: WORLD_H },
   bgColor: '#121a24',
@@ -137,6 +137,10 @@ export const LEVEL_04 = {
   platforms: [
     // G1 Ledge (top-left starting platform)
     plat(T0_LEFT_L, 200, G1_LEDGE_Y),
+
+    // Barrier wall beside G1 ledge — prevents skip-jumping from ledge to Tier 1
+    // Extends from ceiling to just above Tier 0 so player can walk under at ground level
+    { x: 280, y: 288, width: 32, height: 544 },
 
     // Tier 0 ground floor (split by E1 shaft)
     plat(T0_LEFT_L,  T0_LEFT_R,  TIER0_Y),    // left section
@@ -214,6 +218,24 @@ export const LEVEL_04 = {
     { id: 'b1', x: B_X, y: TIER1_Y - PUSH_BLOCK.SIZE / 2 },
   ],
 
+  // ── Spikes (under elevator shafts to prevent softlock) ─
+  spikes: [
+    // Under E1 shaft (Tier 0 gap: 310–410)
+    {
+      id: 'spikes_e1',
+      x: E1_X,
+      y: WORLD_H - SPIKES.HEIGHT / 2,
+      width: E1_SHAFT_R - E1_SHAFT_L - 10,
+    },
+    // Under E2 shaft (Tier 1 gap: 570–670)
+    {
+      id: 'spikes_e2',
+      x: E2_X,
+      y: WORLD_H - SPIKES.HEIGHT / 2,
+      width: E2_SHAFT_R - E2_SHAFT_L - 10,
+    },
+  ],
+
   // ── Goal ───────────────────────────────────────────────
   goal: { x: G3_X, y: TIER3_Y - 30 },
 
@@ -287,4 +309,19 @@ export const LEVEL_04 = {
     { type: 'puddle', x: 1050, y: TIER0_Y, width: 30 },
     { type: 'steam_vent', x: 530, y: TIER1_Y },
   ],
+
+  // ── Victory Popup (shown after lights turn on) ─────────
+  victoryPopup: {
+    id: 'lv4_victory',
+    title: 'Incoming Transmission',
+    speakerName: 'Voltage Jack',
+    portraitKey: 'mentor_face',
+    lines: [
+      'Pshh... Come in Kid.',
+      'Help me! The hoodlums.',
+      'They are after me.',
+      'Completely surrounded.',
+      'Save me!',
+    ],
+  },
 };

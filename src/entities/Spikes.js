@@ -53,12 +53,7 @@ export class Spikes extends Phaser.Physics.Arcade.Sprite {
     /** Whether the spikes have been neutralised (covered by a block). */
     this._neutralised = false;
 
-    // Debug label
-    if (opts.label !== false) {
-      scene.add.text(opts.x, opts.y + h / 2 + 8, opts.label ?? '⚠', {
-        fontSize: '10px', fontFamily: 'monospace', color: '#f44',
-      }).setOrigin(0.5);
-    }
+    // Debug/ID labels removed (visual-only)
   }
 
   /** Whether spikes are still dangerous. */

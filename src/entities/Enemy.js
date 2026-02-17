@@ -57,12 +57,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.play('hoodlum_walk');
     }
 
-    // Debug label
-    if (opts.label) {
-      this._debugLabel = scene.add.text(opts.x, opts.y - h / 2 - 12, opts.label, {
-        fontSize: '10px', fontFamily: 'monospace', color: '#f88',
-      }).setOrigin(0.5);
-    }
+    // Debug/ID labels removed (visual-only)
+    this._debugLabel = null;
   }
 
   /** Whether this enemy is still alive and dangerous. */

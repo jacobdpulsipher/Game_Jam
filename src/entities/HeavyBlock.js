@@ -110,10 +110,7 @@ export class HeavyBlock extends Phaser.Physics.Arcade.Sprite {
     this.topPlatform.body.checkCollision.left  = false;
     this.topPlatform.body.checkCollision.right = false;
 
-    // Debug label
-    this._label = scene.add.text(x, y - h / 2 - 12, 'HW', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#8899aa',
-    }).setOrigin(0.5);
+    // Debug/ID labels removed (visual-only)
 
     // ── Skirt body (fills the gap between block bottom and the floor) ──
     // HW1 body sits above the player body (same-height objects = no vertical
@@ -146,8 +143,5 @@ export class HeavyBlock extends Phaser.Physics.Arcade.Sprite {
     this.skirt.y = this.y + this._h / 2 + this._skirtH / 2;
     this.skirt.body.reset(this.skirt.x, this.skirt.y);
 
-    // Label
-    this._label.x = this.x;
-    this._label.y = this.y - this._h / 2 - 12;
   }
 }

@@ -62,10 +62,7 @@ export class PushBlock extends Phaser.Physics.Arcade.Sprite {
     this.topPlatform.body.checkCollision.left = false;
     this.topPlatform.body.checkCollision.right = false;
 
-    // Label
-    this._label = scene.add.text(x, y - PUSH_BLOCK.SIZE / 2 - 12, 'B', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#aaa',
-    }).setOrigin(0.5);
+    // Debug/ID labels removed (visual-only)
   }
 
   /**
@@ -111,7 +108,10 @@ export class PushBlock extends Phaser.Physics.Arcade.Sprite {
     if (!this.isGrabbed) return false;
 
     // If player is not on ground, auto-release
-    if (!player.body.blocked.down) {
+    const playerSupported = (typeof player.isSupported === 'function')
+      ? player.isSupported()
+      : player.body.blocked.down;
+    if (!playerSupported) {
       return false; // signal to player to release
     }
 
@@ -171,15 +171,12 @@ export class PushBlock extends Phaser.Physics.Arcade.Sprite {
     }
     
     this._syncTop();
-    this._label.x = this.x;
     return true;
   }
 
   /** Called every frame from GameScene to keep topPlatform in sync. */
   syncPosition() {
     this._syncTop();
-    this._label.x = this.x;
-    this._label.y = this.y - PUSH_BLOCK.SIZE / 2 - 12;
   }
 
   /** Sync the top platform with the block position. */

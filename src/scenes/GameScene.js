@@ -20,24 +20,27 @@ import {
   generateACUnitPlatform,
   generateVentBoxPlatform,
   generateCratePlatform,
+  generateSkyscraperPlatform,
 } from '../assets/EnvironmentTextures.js';
 
 /** Map of style names to texture generator functions. */
 const STYLE_GENERATORS = {
-  dumpster: generateDumpsterPlatform,
-  chimney:  generateChimneyPlatform,
-  ac_unit:  generateACUnitPlatform,
-  vent_box: generateVentBoxPlatform,
-  crate:    generateCratePlatform,
+  dumpster:    generateDumpsterPlatform,
+  chimney:     generateChimneyPlatform,
+  ac_unit:     generateACUnitPlatform,
+  vent_box:    generateVentBoxPlatform,
+  crate:       generateCratePlatform,
+  skyscraper:  generateSkyscraperPlatform,
 };
 
 /** Minimum visual height for each platform style (the visual extends below the walkable surface). */
 const STYLE_MIN_HEIGHTS = {
-  dumpster: 32,
-  chimney:  40,
-  ac_unit:  28,
-  vent_box: 20,
-  crate:    32,
+  dumpster:    32,
+  chimney:     40,
+  ac_unit:     28,
+  vent_box:    20,
+  crate:       32,
+  skyscraper:  200,
 };
 
 /**
@@ -73,6 +76,12 @@ export class GameScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════════
 
   _buildLevel(data) {
+    // Cleanup per-level UI hints (scene.restart / next level)
+    if (this._generatorHintText) {
+      this._generatorHintText.destroy();
+      this._generatorHintText = null;
+    }
+
     // Remove any lingering event handlers from a previous level (scene.restart)
     this.events.off('player-action', this._handleAction, this);
     this.events.off('player-interact', this._handleInteract, this);
@@ -138,24 +147,34 @@ export class GameScene extends Phaser.Scene {
         isActivated: g.isActivated,
         autoActivateIds: g.autoActivateIds || [],
       });
-      gen.setLabel(g.label || 'G');
+      // Overhead labels removed
       gen.elementId = g.id;
       this._generators[g.id] = gen;
       this._elementsById[g.id] = gen;
       this._generatorSystem.registerGenerator(g.id, gen);
     }
 
+    // Context hint (Power Climb only): teach players that secondary generator uses E.
+    if (data.id === 'level_04') {
+      const g2 = this._generators?.g2;
+      if (g2 && !g2.isPrimary) {
+        this._generatorHintText = this.add.text(
+          g2.x,
+          g2.y - 70,
+          "Press 'D' to activate this generator",
+          {
+            fontSize: '14px',
+            fontFamily: 'monospace',
+            color: '#44ddff',
+            align: 'center',
+          },
+        ).setOrigin(0.5, 1).setDepth(200).setVisible(false);
+      }
+    }
+
     // ── Player ──
     this.player = new Player(this, data.player.x, data.player.y);
     this.player.generator = this._generators[data.player.generatorId];
-
-    // DEBUG: show worker sprite reference in level 1
-    if (data.id === 'level_01') {
-      this.add.image(300, 300, 'worker')
-        .setScale(1)
-        .setDepth(9999)
-        .setScrollFactor(0);
-    }
 
     // ── Doors ──
     this._doors = [];
@@ -296,6 +315,29 @@ export class GameScene extends Phaser.Scene {
     if (data.goal) {
       this.goalZone = this.add.zone(data.goal.x, data.goal.y, 50, 50);
       this.physics.add.existing(this.goalZone, true);
+    }
+
+    // ── Mentor NPC (Voltage Jack) ──
+    this._mentorSprite = null;
+    this._mentorData = null;
+    if (data.mentor) {
+      this._mentorData = data.mentor;
+      const texKey = data.mentor.textureKey || 'mentor_small';
+      if (this.textures.exists(texKey)) {
+        this._mentorSprite = this.add.image(data.mentor.x, data.mentor.y, texKey)
+          .setOrigin(0.5, 1)
+          .setScale(0.6)
+          .setDepth(10);
+        // Standstill bounce tween
+        this.tweens.add({
+          targets: this._mentorSprite,
+          y: data.mentor.y - 3,
+          duration: 600,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      }
     }
 
     // ── COLLISIONS ──
@@ -447,7 +489,7 @@ export class GameScene extends Phaser.Scene {
 
     // ── Level name ──
     this.add.text(GAME_WIDTH / 2, 20,
-      `${data.name}  |  E = cord  |  F = grab  |  WASD/Arrows = move  |  Space = jump`, {
+      `${data.name}  |  D = cord  |  F = grab  |  Arrows = move  |  Space = jump`, {
         fontSize: '13px', fontFamily: 'monospace', color: '#888',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
@@ -464,7 +506,8 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     // Check tutorial popup zones — show/hide based on proximity (non-blocking)
-    if (this._tutorialPopups && this.player) {
+    // Skip zone checks once the level is complete (victory popup uses the same system)
+    if (this._tutorialPopups && this.player && !this._levelComplete) {
       let insideZone = null;
       for (const zone of this._tutorialPopups) {
         const dx = Math.abs(this.player.x - zone.x);
@@ -486,6 +529,19 @@ export class GameScene extends Phaser.Scene {
     if (this.player) this.player.update();
     if (this.extensionCord) this.extensionCord.update(this.player);
 
+    // Show/hide the Power Climb generator hint when the player approaches G2.
+    if (this._generatorHintText && this.player && this._levelData?.id === 'level_04') {
+      const g2 = this._generators?.g2;
+      if (!g2 || g2.isPrimary) {
+        this._generatorHintText.setVisible(false);
+      } else if (g2.isActivated) {
+        this._generatorHintText.setVisible(false);
+      } else {
+        const dist = Phaser.Math.Distance.Between(g2.x, g2.y, this.player.x, this.player.y);
+        this._generatorHintText.setVisible(dist <= 90);
+      }
+    }
+
     // Update enemies
     for (const enemy of this._enemies) {
       if (enemy.active) enemy.update();
@@ -494,7 +550,7 @@ export class GameScene extends Phaser.Scene {
     // Elevator rider logic — carry the player along with moving elevators
     for (const elev of this._elevators) {
       elev.trackMovement();
-      if (elev.deltaY !== 0 && this.player && this.player.body.blocked.down) {
+      if (elev.deltaY !== 0 && this.player) {
         // Check if player is standing on this elevator
         const px = this.player.x;
         const py = this.player.y + this.player.body.halfHeight;
@@ -504,6 +560,25 @@ export class GameScene extends Phaser.Scene {
                        Math.abs(py - ey) < 8;
         if (onTop) {
           this.player.y += elev.deltaY;
+
+          // If the player is holding a push block and it's riding this elevator,
+          // carry it along too. Grabbed blocks are kinematic (body.moves=false),
+          // so they won't be pushed by the moving elevator unless we do this.
+          const grabbed = this.player.grabbedBlock;
+          if (grabbed && grabbed.isGrabbed) {
+            const bx = grabbed.x;
+            const by = grabbed.y + PUSH_BLOCK.SIZE / 2;
+            const blockOnTop = Math.abs(bx - ex) < elev._w / 2 + PUSH_BLOCK.SIZE / 2 + 4 &&
+                               Math.abs(by - ey) < 12;
+            if (blockOnTop) {
+              grabbed.y += elev.deltaY;
+              if (grabbed.body) {
+                grabbed.body.position.y += elev.deltaY;
+                grabbed.body.prev.y += elev.deltaY;
+              }
+              grabbed.syncPosition();
+            }
+          }
         }
       }
     }
@@ -707,45 +782,84 @@ export class GameScene extends Phaser.Scene {
       g.fillStyle(color, 1);
       g.fillRect(bx, by, bw, bh);
 
-      // ── Cornice / ledge at top (slightly wider overhang) ──
-      const overhang = 3;
-      const r = (color >> 16) & 0xff;
-      const gr2 = (color >> 8) & 0xff;
-      const bl = color & 0xff;
-      const corniceColor = Phaser.Display.Color.GetColor(
-        Math.min(255, r + 18), Math.min(255, gr2 + 18), Math.min(255, bl + 25)
+      // ── Brick pattern overlay ──
+      const brickW = 14;
+      const brickH = 7;
+      // Horizontal mortar lines
+      const r0 = (color >> 16) & 0xff;
+      const g0 = (color >> 8) & 0xff;
+      const b0 = color & 0xff;
+      const mortarC = Phaser.Display.Color.GetColor(
+        Math.max(0, r0 - 10), Math.max(0, g0 - 10), Math.max(0, b0 - 10)
       );
-      g.fillStyle(corniceColor, 0.9);
-      g.fillRect(bx - overhang, by, bw + overhang * 2, 3);
+      g.fillStyle(mortarC, 0.3);
+      for (let my = by; my < by + bh; my += brickH) {
+        g.fillRect(bx, my, bw, 1);
+      }
+      // Vertical mortar (offset rows)
+      for (let my = by; my < by + bh; my += brickH) {
+        const row = Math.floor((my - by) / brickH);
+        const off = (row % 2 === 0) ? 0 : brickW / 2;
+        g.fillStyle(mortarC, 0.2);
+        for (let mx = bx + off; mx < bx + bw; mx += brickW) {
+          g.fillRect(mx, my, 1, brickH);
+        }
+      }
+      // Subtle brick color variation
+      for (let my = by; my < by + bh; my += brickH) {
+        const row = Math.floor((my - by) / brickH);
+        const off = (row % 2 === 0) ? 0 : brickW / 2;
+        for (let mx = bx + off; mx < bx + bw; mx += brickW) {
+          const h = ((mx * 7 + my * 13) % 29);
+          if (h < 4) {
+            g.fillStyle(0x000000, 0.06);
+            g.fillRect(mx + 1, my + 1, brickW - 2, brickH - 2);
+          } else if (h < 7) {
+            g.fillStyle(0xffffff, 0.03);
+            g.fillRect(mx + 1, my + 1, brickW - 2, brickH - 2);
+          }
+        }
+      }
 
-      // ── Side edges (darker vertical bands) ──
-      g.fillStyle(0x000000, 0.18);
-      g.fillRect(bx, by + 3, 2, bh - 3);
-      g.fillRect(bx + bw - 2, by + 3, 2, bh - 3);
+      // ── Cornice / ledge at top (slightly wider overhang) ──
+      const overhang = 4;
+      const corniceColor = Phaser.Display.Color.GetColor(
+        Math.min(255, r0 + 22), Math.min(255, g0 + 22), Math.min(255, b0 + 30)
+      );
+      g.fillStyle(corniceColor, 0.95);
+      g.fillRect(bx - overhang, by, bw + overhang * 2, 4);
+      // Decorative band below cornice
+      g.fillStyle(corniceColor, 0.5);
+      g.fillRect(bx - overhang + 1, by + 4, bw + overhang * 2 - 2, 2);
+
+      // ── Side edges (darker vertical bands for depth) ──
+      g.fillStyle(0x000000, 0.22);
+      g.fillRect(bx, by + 6, 3, bh - 6);
+      g.fillRect(bx + bw - 3, by + 6, 3, bh - 6);
 
       // ── Vertical column separators for wide buildings ──
       if (bw > 120) {
         const colSpacing = bw > 250 ? 80 : 60;
         for (let cx = bx + colSpacing; cx < bx + bw - 20; cx += colSpacing) {
-          g.fillStyle(0x000000, 0.1);
-          g.fillRect(cx, by + 4, 2, bh - 8);
+          g.fillStyle(0x000000, 0.12);
+          g.fillRect(cx, by + 6, 2, bh - 10);
         }
       }
 
-      // ── Floor separator lines ──
-      const floorH = 38;
+      // ── Floor separator lines (stone bands) ──
+      const floorH = 36;
       for (let fy = by + floorH; fy < by + bh - 10; fy += floorH) {
-        g.fillStyle(0x000000, 0.08);
-        g.fillRect(bx + 4, fy, bw - 8, 1);
+        g.fillStyle(corniceColor, 0.25);
+        g.fillRect(bx + 4, fy, bw - 8, 2);
       }
 
-      // ── Windows ──
-      const winW = 5;
-      const winH = 7;
-      const spacingX = 14;
-      const spacingY = 16;
-      const marginX = 10;
-      const marginY = 12;
+      // ── Windows — larger, more detailed ──
+      const winW = 9;
+      const winH = 12;
+      const spacingX = 20;
+      const spacingY = 24;
+      const marginX = 12;
+      const marginY = 14;
 
       let floorIdx = 0;
       for (let wy = by + marginY; wy + winH < by + bh - 8; wy += spacingY) {
@@ -753,16 +867,46 @@ export class GameScene extends Phaser.Scene {
         if (floorIdx % 7 === 4) { floorIdx++; continue; }
         for (let wx = bx + marginX; wx + winW < bx + bw - marginX; wx += spacingX) {
           // Deterministic lit/unlit using position hash
-          const hash = ((wx * 3 + wy * 7 + bx) % 13);
-          const isLit = hash < 2;
-          if (isLit) {
-            // Warm lit window (dim yellow/orange)
-            const warmth = (hash === 0) ? 0x443311 : 0x3a3822;
-            g.fillStyle(warmth, 0.65);
+          const hash = ((wx * 3 + wy * 7 + bx) % 17);
+
+          // Window recess
+          g.fillStyle(0x000000, 0.2);
+          g.fillRect(wx - 1, wy - 1, winW + 2, winH + 2);
+
+          if (hash < 3) {
+            // Warm lit window (yellow/orange)
+            const warmth = hash === 0 ? 0x886633 : hash === 1 ? 0x7a6030 : 0x6a5528;
+            g.fillStyle(warmth, 0.7);
+            g.fillRect(wx, wy, winW, winH);
+            // Half-drawn blind
+            if (hash === 1) {
+              g.fillStyle(0x554422, 0.35);
+              g.fillRect(wx, wy, winW, winH / 2);
+            }
+          } else if (hash < 5) {
+            // Bluish reflected sky
+            g.fillStyle(0x1a2a44, 0.8);
+            g.fillRect(wx, wy, winW, winH);
           } else {
-            g.fillStyle(0x0f0f22, 0.9);
+            // Dark window
+            g.fillStyle(0x0a0a18, 0.9);
+            g.fillRect(wx, wy, winW, winH);
           }
-          g.fillRect(wx, wy, winW, winH);
+
+          // Window sill
+          g.fillStyle(corniceColor, 0.5);
+          g.fillRect(wx - 1, wy + winH, winW + 2, 2);
+          // Center mullion
+          g.fillStyle(0x000000, 0.15);
+          g.fillRect(wx + Math.floor(winW / 2), wy, 1, winH);
+
+          // Occasional window AC unit
+          if (hash % 13 === 5 && wy + winH + 8 < by + bh) {
+            g.fillStyle(0x4a4a4a, 0.7);
+            g.fillRect(wx, wy + winH + 2, winW, 5);
+            g.fillStyle(0x3a3a3a, 0.5);
+            g.fillRect(wx + 1, wy + winH + 3, winW - 2, 1);
+          }
         }
         floorIdx++;
       }
@@ -966,6 +1110,7 @@ export class GameScene extends Phaser.Scene {
   /** Show a non-blocking tutorial hint in the top-left corner. */
   _showTutorial(data) {
     this._dismissTutorial();
+    music.playRadioBeep();
 
     const portraitKey = data.portraitKey;
     const hasPortrait = !!portraitKey && this.textures.exists(portraitKey);
@@ -1416,6 +1561,12 @@ export class GameScene extends Phaser.Scene {
     // Stop level music
     music.stop();
 
+    // ── Mentor rescue path (Level 06 ending) ──
+    if (this._mentorData) {
+      this._onRescueMentor();
+      return;
+    }
+
     // --- Repair cutscene: 3 wrench strikes with clangs & smoke ---
     const STRIKES = 3;
     const STRIKE_DELAY = 450; // ms between strikes
@@ -1447,6 +1598,181 @@ export class GameScene extends Phaser.Scene {
 
     // Small pause before first strike
     this.time.delayedCall(300, doStrike);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  MENTOR RESCUE — Level 06 ending sequence
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Called when the player reaches Voltage Jack in Level 06.
+   * Shows a dialogue box, then "To Be Continued" title card.
+   */
+  _onRescueMentor() {
+    // Play rescue SFX (joyful chime)
+    music.playRescueChime();
+
+    // Pause physics so everything freezes during the cutscene
+    this.physics.pause();
+
+    // Stop the mentor bounce tween and settle him in place
+    if (this._mentorSprite) {
+      this.tweens.killTweensOf(this._mentorSprite);
+    }
+
+    // Show dialogue box after a short beat
+    this.time.delayedCall(600, () => {
+      this._showMentorDialogue(this._mentorData.lines, () => {
+        // After dialogue is dismissed, show "To Be Continued"
+        this._showToBeContinued();
+      });
+    });
+  }
+
+  /**
+   * Display a dialogue box with Voltage Jack's portrait and multiple lines.
+   * Player presses ENTER/SPACE to advance through lines, then calls onComplete.
+   */
+  _showMentorDialogue(lines, onComplete) {
+    const portraitKey = this.textures.exists('mentor_face') ? 'mentor_face' : null;
+    const hasPortrait = !!portraitKey;
+    const speakerName = 'Voltage Jack';
+
+    const margin = 12;
+    const lineH = 22;
+    const padding = 16;
+    const titleH = 30;
+    const portraitTarget = 64;
+    let portraitW = 0, portraitH = 0, portraitScale = 1;
+    if (hasPortrait) {
+      const src = this.textures.get(portraitKey).getSourceImage();
+      const srcW = src?.width || portraitTarget;
+      const srcH = src?.height || portraitTarget;
+      portraitScale = Math.min(portraitTarget / srcW, portraitTarget / srcH);
+      portraitW = Math.round(srcW * portraitScale);
+      portraitH = Math.round(srcH * portraitScale);
+    }
+    const portraitGap = hasPortrait ? 10 : 0;
+
+    const boxW = 460;
+    const visibleLines = lines.length;
+    const contentH = titleH + padding + visibleLines * lineH + padding + 20;
+    const boxH = Math.max(contentH, titleH + padding + portraitH + padding);
+    const boxX = margin;
+    const boxY = margin;
+    const contentX = boxX + padding + (hasPortrait ? (portraitW + portraitGap) : 0);
+
+    // Panel background
+    const panel = this.add.graphics().setScrollFactor(0).setDepth(501);
+    panel.fillStyle(0xffaa00, 0.25);
+    panel.fillRoundedRect(boxX - 2, boxY - 2, boxW + 4, boxH + 4, 8);
+    panel.fillStyle(0x0a0a1e, 0.92);
+    panel.fillRoundedRect(boxX, boxY, boxW, boxH, 6);
+    panel.fillStyle(0xffaa00, 0.7);
+    panel.fillRect(boxX + 12, boxY + 4, boxW - 24, 2);
+
+    // Portrait
+    let portrait = null;
+    if (hasPortrait) {
+      const px = boxX + padding;
+      const py = boxY + titleH + padding;
+      panel.fillStyle(0x000000, 0.25);
+      panel.fillRoundedRect(px - 6, py - 6, portraitW + 12, portraitH + 12, 6);
+      panel.fillStyle(0xffaa00, 0.25);
+      panel.fillRoundedRect(px - 4, py - 4, portraitW + 8, portraitH + 8, 6);
+      portrait = this.add.image(px, py, portraitKey)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(502).setScale(portraitScale);
+    }
+
+    // Title
+    const title = this.add.text(contentX, boxY + 12, speakerName, {
+      fontSize: '16px', fontFamily: 'monospace', color: '#ffcc44', fontStyle: 'bold',
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(502);
+
+    // Body lines — all visible
+    const bodyTexts = [];
+    const bodyStartY = boxY + titleH + padding;
+    for (let i = 0; i < lines.length; i++) {
+      const t = this.add.text(contentX, bodyStartY + i * lineH, lines[i], {
+        fontSize: '13px', fontFamily: 'monospace', color: '#ccccdd',
+      }).setOrigin(0, 0).setScrollFactor(0).setDepth(502);
+      bodyTexts.push(t);
+    }
+
+    // "Press ENTER" hint
+    const hint = this.add.text(boxX + boxW / 2, boxY + boxH - 10, '[ Press ENTER ]', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#888888',
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(502);
+
+    // Blink the hint
+    this.tweens.add({
+      targets: hint, alpha: 0.3, duration: 500, yoyo: true, repeat: -1,
+    });
+
+    // Wait for ENTER to dismiss
+    const dismiss = () => {
+      panel.destroy();
+      title.destroy();
+      if (portrait) portrait.destroy();
+      bodyTexts.forEach(t => t.destroy());
+      hint.destroy();
+      if (onComplete) onComplete();
+    };
+
+    this.input.keyboard.once('keydown-ENTER', dismiss);
+    this.input.keyboard.once('keydown-SPACE', dismiss);
+  }
+
+  /**
+   * Show the "To Be Continued" title card with music.
+   */
+  _showToBeContinued() {
+    // Dim the screen
+    const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
+    const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+
+    const dimOverlay = this.add.rectangle(cx, cy, GAME_WIDTH + 100, GAME_HEIGHT + 100, 0x000000, 0)
+      .setScrollFactor(0).setDepth(600);
+    this.tweens.add({
+      targets: dimOverlay, fillAlpha: 0.6, duration: 1200, ease: 'Quad.easeIn',
+    });
+
+    // Play the ending song
+    this.time.delayedCall(500, () => {
+      music.playEnding();
+    });
+
+    // Big yellow "To Be Continued" text — fades in
+    const tbcText = this.add.text(cx, cy, 'To Be Continued', {
+      fontSize: '48px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#ffdd00',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(601).setAlpha(0);
+
+    this.tweens.add({
+      targets: tbcText,
+      alpha: 1,
+      duration: 2000,
+      delay: 800,
+      ease: 'Quad.easeIn',
+    });
+
+    // Subtle pulse on the text once visible
+    this.time.delayedCall(3000, () => {
+      this.tweens.add({
+        targets: tbcText,
+        scaleX: { from: 1, to: 1.03 },
+        scaleY: { from: 1, to: 1.03 },
+        duration: 1500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    });
   }
 
   /** Spawn a burst of smoke puff circles that float upward and fade. */
@@ -1492,25 +1818,51 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(POWER_UP_DURATION + 200, () => {
       music.playVictory();
 
-      const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
-      const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+      // Show victory popup (e.g. Voltage Jack radio message) if defined
+      const popup = this._levelData.victoryPopup;
+      if (popup) {
+        // Wait for the victory fanfare to finish (~2s) before showing the popup
+        this.time.delayedCall(2500, () => {
+          this._showTutorial(popup);
+          // Show "Press ENTER to continue" prompt below the popup
+          const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
+          const promptY = this.cameras.main.scrollY + GAME_HEIGHT - 40;
+          const promptText = this.add.text(cx, promptY, 'Press ENTER to continue', {
+            fontSize: '18px', fontFamily: 'monospace', color: '#44ddff', align: 'center',
+          }).setOrigin(0.5).setDepth(502).setScrollFactor(0);
 
-      const next = this._levelData.nextLevel;
-      const msg = next
-        ? 'Level Complete!\nPress ENTER for next level'
-        : 'Generator Fixed!\nYou Win!';
-
-      this.add.text(cx, cy, msg, {
-        fontSize: '32px', fontFamily: 'monospace', color: '#0f0', align: 'center',
-      }).setOrigin(0.5).setDepth(200);
-
-      if (next) {
-        this.input.keyboard.once('keydown-ENTER', () => {
-          this.scene.stop(SCENES.UI);
-          this.scene.restart({ levelId: next });
+          this.input.keyboard.once('keydown-ENTER', () => {
+            this._dismissTutorial();
+            promptText.destroy();
+            this._showLevelComplete();
+          });
         });
+      } else {
+        this._showLevelComplete();
       }
     });
+  }
+
+  /** Show the "Level Complete" / "You Win" text and wire up ENTER to advance. */
+  _showLevelComplete() {
+    const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
+    const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+
+    const next = this._levelData.nextLevel;
+    const msg = next
+      ? 'Level Complete!\nPress ENTER for next level'
+      : 'Generator Fixed!\nYou Win!';
+
+    this.add.text(cx, cy, msg, {
+      fontSize: '32px', fontFamily: 'monospace', color: '#0f0', align: 'center',
+    }).setOrigin(0.5).setDepth(200);
+
+    if (next) {
+      this.input.keyboard.once('keydown-ENTER', () => {
+        this.scene.stop(SCENES.UI);
+        this.scene.restart({ levelId: next });
+      });
+    }
   }
 
   /**
@@ -1608,37 +1960,60 @@ export class GameScene extends Phaser.Scene {
     bgGlow.setScrollFactor(0.3, 0.3); // match backdrop parallax
     bgGlow.setAlpha(0);
 
-    // Far buildings — light up most windows
-    const farCount = Math.floor(worldW / 60) + 4;
-    for (let i = 0; i < farCount; i++) {
-      const bx = i * 60 - 30 + ((i * 37) % 20);
-      const bh = 80 + ((i * 73) % 120);
-      const bw = 30 + ((i * 41) % 30);
-      for (let wy = worldH - bh - 90; wy < worldH - 110; wy += 12) {
+    // Mirror _drawCityBackdrop() placement exactly so overlays always align.
+
+    // Far buildings (same as _drawCityBackdrop far layer)
+    const farBuildings = Math.floor(worldW / 40) + 6;
+    for (let i = 0; i < farBuildings; i++) {
+      const bx = i * 40 - 30 + ((i * 37) % 20);
+      const bh = 60 + ((i * 73) % 140);
+      const bw = 22 + ((i * 41) % 35);
+
+      for (let wy = worldH - bh - 90; wy < worldH - 110; wy += 10) {
+        for (let wx = bx + 3; wx < bx + bw - 3; wx += 6) {
+          // Keep some windows dark for texture (deterministic)
+          if (((wx * 5 + wy * 3 + i * 11) % 13) < 3) continue;
+          const warmth = (((wx + wy + i) % 4) === 0) ? 0xffdd55 : 0xffcc33;
+          bgGlow.fillStyle(warmth, 0.5);
+          bgGlow.fillRect(wx, wy, 2, 3);
+        }
+      }
+    }
+
+    // Mid-distance buildings (same as _drawCityBackdrop mid layer)
+    const midBuildings = Math.floor(worldW / 55) + 5;
+    for (let i = 0; i < midBuildings; i++) {
+      const bx = i * 55 + ((i * 43) % 25) - 15;
+      const bh = 90 + ((i * 89) % 180);
+      const bw = 35 + ((i * 51) % 45);
+
+      for (let wy = worldH - bh - 70; wy < worldH - 90; wy += 12) {
         for (let wx = bx + 4; wx < bx + bw - 4; wx += 8) {
-          // Keep ~20% dark for realism
-          if (((wx * 5 + wy * 3) % 10) < 2) continue;
-          const warmth = ((wx + wy) % 3 === 0) ? 0xffdd44 : 0xffcc33;
-          bgGlow.fillStyle(warmth, 0.45);
+          const hash = (wx * 5 + wy * 3 + i) % 17;
+          const wasLit = hash < 2;
+          if (wasLit) continue; // already had a lit window
+          if (((wx * 7 + wy * 2 + i * 3) % 19) < 3) continue; // keep some dark
+          const warmth = (((wx + wy + i) % 3) === 0) ? 0xffdd44 : 0xeebb33;
+          bgGlow.fillStyle(warmth, 0.55);
           bgGlow.fillRect(wx, wy, 3, 4);
         }
       }
     }
 
-    // Near buildings — light up previously-dark windows
-    const nearCount = Math.floor(worldW / 80) + 3;
-    for (let i = 0; i < nearCount; i++) {
-      const bx = i * 80 + ((i * 53) % 30) - 20;
-      const bh = 100 + ((i * 97) % 160);
-      const bw = 40 + ((i * 61) % 40);
+    // Foreground buildings (same as _drawCityBackdrop near layer)
+    const nearBuildings = Math.floor(worldW / 60) + 5;
+    for (let i = 0; i < nearBuildings; i++) {
+      const bx = i * 60 + ((i * 53) % 30) - 20;
+      const bh = 100 + ((i * 97) % 180);
+      const bw = 40 + ((i * 61) % 50);
+
       for (let wy = worldH - bh - 50; wy < worldH - 70; wy += 14) {
         for (let wx = bx + 5; wx < bx + bw - 5; wx += 10) {
           const wasLit = ((wx * 3 + wy * 7) % 11) < 2;
-          if (wasLit) continue; // already lit
-          // Keep ~15% dark
-          if (((wx * 7 + wy * 2) % 13) < 2) continue;
-          const warmth = ((wx + wy) % 3 === 0) ? 0xffcc33 : 0xeebb22;
-          bgGlow.fillStyle(warmth, 0.5);
+          if (wasLit) continue;
+          if (((wx * 7 + wy * 2 + i * 5) % 17) < 3) continue;
+          const warmth = (((wx + wy + i) % 3) === 0) ? 0xffcc33 : 0xeebb22;
+          bgGlow.fillStyle(warmth, 0.6);
           bgGlow.fillRect(wx, wy, 4, 5);
         }
       }
@@ -1649,33 +2024,40 @@ export class GameScene extends Phaser.Scene {
     midGlow.setDepth(-4);
     midGlow.setAlpha(0);
 
-    const midBuildings = this._levelData.midgroundBuildings || [];
-    for (const b of midBuildings) {
+    const midgroundBuildings = this._levelData.midgroundBuildings || [];
+    for (const b of midgroundBuildings) {
       const bx = b.x;
       const by = b.y;
       const bw = b.width;
       const bh = b.height;
-      const winW = 5, winH = 7;
-      const spacingX = 14, spacingY = 16;
-      const marginX = 10, marginY = 12;
+      // Match _drawMidgroundBuildings() window grid
+      const winW = 9;
+      const winH = 12;
+      const spacingX = 20;
+      const spacingY = 24;
+      const marginX = 12;
+      const marginY = 14;
 
       let floorIdx = 0;
       for (let wy = by + marginY; wy + winH < by + bh - 8; wy += spacingY) {
         if (floorIdx % 7 === 4) { floorIdx++; continue; }
         for (let wx = bx + marginX; wx + winW < bx + bw - marginX; wx += spacingX) {
-          const hash = ((wx * 3 + wy * 7 + bx) % 13);
-          const wasLit = hash < 2;
-          if (wasLit) continue; // already lit
-          // Keep ~10% dark even after power-up
-          if (hash === 3) continue;
-          // Warm lit window
+          const hash = ((wx * 3 + wy * 7 + bx) % 17);
+
+          // In _drawMidgroundBuildings(): hash < 3 warm-lit, hash < 5 bluish, else dark.
+          if (hash < 5) continue;
+
+          // Keep a small fraction dark even after power-up
+          if (((wx * 11 + wy * 5 + bx) % 23) < 3) continue;
+
           const warmth = (hash % 4 === 0) ? 0xffdd44 : 0xeebb33;
-          midGlow.fillStyle(warmth, 0.6);
+          midGlow.fillStyle(warmth, 0.55);
           midGlow.fillRect(wx, wy, winW, winH);
-          // Small ambient glow around window (soft orange halo)
+
+          // Soft orange halo on some windows
           if (hash % 5 === 0) {
-            midGlow.fillStyle(0xffaa22, 0.08);
-            midGlow.fillRect(wx - 2, wy - 1, winW + 4, winH + 2);
+            midGlow.fillStyle(0xffaa22, 0.07);
+            midGlow.fillRect(wx - 3, wy - 2, winW + 6, winH + 4);
           }
         }
         floorIdx++;

@@ -97,11 +97,7 @@ export class Elevator extends Phaser.Physics.Arcade.Sprite {
     /** @private */
     this._isActive = false;
 
-    // Debug label
-    const label = opts.label ?? 'E';
-    scene.add.text(opts.x, opts.startY - 20, label, {
-      fontSize: '14px', fontFamily: 'monospace', color: '#4af',
-    }).setOrigin(0.5);
+    // Debug/ID labels removed (visual-only)
 
     /** Track Y delta each frame so riders can be carried along */
     this._prevY = opts.startY;

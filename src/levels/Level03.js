@@ -120,6 +120,8 @@ export const LEVEL_03 = {
 
   generators: [
     { id: 'g1', x: G1_X, y: FLOOR_Y - 20, label: 'G1' },
+    // Goal marker generator (matches other levels where reaching G2 completes the level)
+    { id: 'g2', x: G2_X, y: FLOOR_Y - 20, label: 'G2' },
   ],
 
   terminals: [
@@ -163,7 +165,7 @@ export const LEVEL_03 = {
     },
   ],
 
-  goal: { x: G2_X, y: FLOOR_Y - 40 },
+  goal: { x: G2_X, y: FLOOR_Y - 20 },
 
   // ── Midground Buildings ────────────────────────────────
   midgroundBuildings: [

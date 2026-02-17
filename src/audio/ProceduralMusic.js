@@ -6,8 +6,8 @@
  */
 
 const NOTE = {
-  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
-  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, Bb3: 233.08, B3: 246.94,
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, Bb4: 466.16, B4: 493.88,
   C5: 523.25, D5: 587.33, E5: 659.26, F5: 698.46, G5: 783.99, A5: 880.00,
   C6: 1046.50,
   REST: 0,
@@ -112,6 +112,59 @@ export class ProceduralMusic {
     g3.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     src.connect(bp); bp.connect(g3); g3.connect(this._master);
     src.start(now); src.stop(now + 0.08);
+    this._nodes.push(src);
+  }
+
+  /**
+   * Play a death sound — descending buzz + thud when the player dies.
+   * Short (~0.5s), punchy, unmistakably "you died".
+   */
+  playDeath() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // 1. Descending pitch sweep — the classic "wah wah" fall
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(600, now);
+    osc1.frequency.exponentialRampToValueAtTime(80, now + 0.45);
+    g1.gain.setValueAtTime(0.18, now);
+    g1.gain.linearRampToValueAtTime(0.12, now + 0.15);
+    g1.gain.linearRampToValueAtTime(0.001, now + 0.5);
+    osc1.connect(g1); g1.connect(this._master);
+    osc1.start(now); osc1.stop(now + 0.55);
+    this._nodes.push(osc1);
+
+    // 2. Low thud — impact hit
+    const osc2 = this.ctx.createOscillator();
+    const g2 = this.ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(150, now + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+    g2.gain.setValueAtTime(0.35, now + 0.05);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc2.connect(g2); g2.connect(this._master);
+    osc2.start(now + 0.05); osc2.stop(now + 0.4);
+    this._nodes.push(osc2);
+
+    // 3. Noise crackle — electric fizzle
+    const noiseLen = Math.floor(this.ctx.sampleRate * 0.25);
+    const noiseBuf = this.ctx.createBuffer(1, noiseLen, this.ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseLen; i++) {
+      nd[i] = (Math.random() * 2 - 1) * (1 - i / noiseLen);
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 2;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.2, now);
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    src.connect(bp); bp.connect(ng); ng.connect(this._master);
+    src.start(now); src.stop(now + 0.3);
     this._nodes.push(src);
   }
 
@@ -247,6 +300,263 @@ export class ProceduralMusic {
     this._nodes.push(crackleSrc);
   }
 
+  /**
+   * Play a hand-radio beep — the classic two-tone "walkie-talkie" chirp
+   * heard when a push-to-talk radio opens. Short squelch burst + dual-tone beep.
+   */
+  playRadioBeep() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // 1. Static squelch burst — filtered noise (radio opening)
+    const squelchLen = Math.floor(this.ctx.sampleRate * 0.08);
+    const squelchBuf = this.ctx.createBuffer(1, squelchLen, this.ctx.sampleRate);
+    const squelchData = squelchBuf.getChannelData(0);
+    for (let i = 0; i < squelchLen; i++) {
+      squelchData[i] = (Math.random() * 2 - 1) * (1 - i / squelchLen);
+    }
+    const squelchSrc = this.ctx.createBufferSource();
+    squelchSrc.buffer = squelchBuf;
+    const squelchBp = this.ctx.createBiquadFilter();
+    squelchBp.type = 'bandpass'; squelchBp.frequency.value = 2200; squelchBp.Q.value = 3;
+    const squelchG = this.ctx.createGain();
+    squelchG.gain.setValueAtTime(0.15, now);
+    squelchG.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    squelchSrc.connect(squelchBp); squelchBp.connect(squelchG); squelchG.connect(this._master);
+    squelchSrc.start(now); squelchSrc.stop(now + 0.1);
+    this._nodes.push(squelchSrc);
+
+    // 2. Dual-tone beep (like a two-way radio chirp: ~1000 Hz + ~1300 Hz)
+    const beepStart = now + 0.06;
+    const beepDur = 0.12;
+    const freqs = [1000, 1300];
+    for (const freq of freqs) {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.12, beepStart);
+      g.gain.setValueAtTime(0.12, beepStart + beepDur * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.001, beepStart + beepDur);
+      osc.connect(g); g.connect(this._master);
+      osc.start(beepStart); osc.stop(beepStart + beepDur + 0.02);
+      this._nodes.push(osc);
+    }
+
+    // 3. Second beep (slightly higher, confirms transmission)
+    const beep2Start = beepStart + 0.15;
+    const beep2Dur = 0.1;
+    const freqs2 = [1200, 1500];
+    for (const freq of freqs2) {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.10, beep2Start);
+      g.gain.setValueAtTime(0.10, beep2Start + beep2Dur * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.001, beep2Start + beep2Dur);
+      osc.connect(g); g.connect(this._master);
+      osc.start(beep2Start); osc.stop(beep2Start + beep2Dur + 0.02);
+      this._nodes.push(osc);
+    }
+  }
+
+  /**
+   * Play a joyful rescue chime — bright ascending arpeggio when the player
+   * reaches Voltage Jack. Short, triumphant, and warm.
+   */
+  playRescueChime() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // Ascending major arpeggio (C-E-G-C octave) with warm triangle waves
+    const notes = [NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5];
+    const gap = 0.12;
+    for (let i = 0; i < notes.length; i++) {
+      const t = now + i * gap;
+      const dur = i === notes.length - 1 ? 0.6 : 0.2;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(notes[i], t);
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      g.gain.linearRampToValueAtTime(0.08, t + dur * 0.5);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(g); g.connect(this._master);
+      osc.start(t); osc.stop(t + dur + 0.05);
+      this._nodes.push(osc);
+    }
+
+    // Sparkle — high bell tone on top
+    const bell = this.ctx.createOscillator();
+    const bg = this.ctx.createGain();
+    bell.type = 'sine';
+    bell.frequency.setValueAtTime(NOTE.E5, now + notes.length * gap);
+    bg.gain.setValueAtTime(0.001, now + notes.length * gap);
+    bg.gain.linearRampToValueAtTime(0.06, now + notes.length * gap + 0.02);
+    bg.gain.exponentialRampToValueAtTime(0.001, now + notes.length * gap + 0.8);
+    bell.connect(bg); bg.connect(this._master);
+    bell.start(now + notes.length * gap);
+    bell.stop(now + notes.length * gap + 0.85);
+    this._nodes.push(bell);
+  }
+
+  /**
+   * Play a triumphant ending theme for "To Be Continued" screen.
+   * Bold, uplifting fanfare that builds to a soaring climax — the hero wins.
+   */
+  playEnding() {
+    this.stop();
+    this.init();
+    if (!this.ctx) return;
+    this._playing = true;
+    this._track = 'ending';
+
+    const bpm = 132;
+    const q = 60 / bpm;       // quarter note
+    const e = q / 2;           // eighth note
+    const h = q * 2;           // half note
+    const w = q * 4;           // whole note
+    const seq = [];
+
+    // ── Melody: triumphant fanfare (square wave — bold & heroic) ──
+    const melody = [
+      // Phrase 1: bold ascending fanfare (C major)
+      { t: 0,           freq: NOTE.C5,  d: q },
+      { t: q,           freq: NOTE.E5,  d: q },
+      { t: q * 2,       freq: NOTE.G5,  d: h },
+      { t: q * 4,       freq: NOTE.A5,  d: q },
+      { t: q * 5,       freq: NOTE.G5,  d: e },
+      { t: q * 5.5,     freq: NOTE.A5,  d: q * 1.5 },
+      // Phrase 2: climbing higher (F major → G major)
+      { t: q * 7,       freq: NOTE.C5,  d: e },
+      { t: q * 7.5,     freq: NOTE.D5,  d: e },
+      { t: q * 8,       freq: NOTE.E5,  d: q },
+      { t: q * 9,       freq: NOTE.F5,  d: q },
+      { t: q * 10,      freq: NOTE.G5,  d: h },
+      { t: q * 12,      freq: NOTE.A5,  d: q },
+      { t: q * 13,      freq: NOTE.G5,  d: q * 1.5 },
+      // Phrase 3: triumphant peak — soaring resolution
+      { t: q * 15,      freq: NOTE.E5,  d: q },
+      { t: q * 16,      freq: NOTE.G5,  d: q },
+      { t: q * 17,      freq: NOTE.A5,  d: q },
+      { t: q * 18,      freq: NOTE.C6,  d: h },
+      { t: q * 20,      freq: NOTE.A5,  d: q },
+      { t: q * 21,      freq: NOTE.G5,  d: q },
+      { t: q * 22,      freq: NOTE.C6,  d: w },
+    ];
+
+    for (const n of melody) {
+      seq.push({ t: n.t, freq: n.freq, d: n.d, wave: 'square', vol: 0.08 });
+    }
+
+    // ── Counter-melody: bright arpeggiated fills (triangle wave) ──
+    const counter = [
+      { t: q * 2,   freq: NOTE.E4,  d: e },
+      { t: q * 2.5, freq: NOTE.G4,  d: e },
+      { t: q * 3,   freq: NOTE.C5,  d: e },
+      { t: q * 3.5, freq: NOTE.E5,  d: e },
+      { t: q * 10,  freq: NOTE.G4,  d: e },
+      { t: q * 10.5,freq: NOTE.B4,  d: e },
+      { t: q * 11,  freq: NOTE.D5,  d: e },
+      { t: q * 11.5,freq: NOTE.G5,  d: e },
+      { t: q * 18,  freq: NOTE.C4,  d: e },
+      { t: q * 18.5,freq: NOTE.E4,  d: e },
+      { t: q * 19,  freq: NOTE.G4,  d: e },
+      { t: q * 19.5,freq: NOTE.C5,  d: e },
+    ];
+
+    for (const n of counter) {
+      seq.push({ t: n.t, freq: n.freq, d: n.d, wave: 'triangle', vol: 0.06 });
+    }
+
+    // ── Harmony: power chords (sine — full & sustained) ──
+    const chords = [
+      { t: 0,       notes: [NOTE.C3, NOTE.E3, NOTE.G3],          d: q * 7 },
+      { t: q * 7,   notes: [NOTE.F3, NOTE.A3, NOTE.C4],          d: q * 3 },
+      { t: q * 10,  notes: [NOTE.G3, NOTE.B3, NOTE.D4],          d: q * 5 },
+      { t: q * 15,  notes: [NOTE.C3, NOTE.E3, NOTE.G3],          d: q * 3 },
+      { t: q * 18,  notes: [NOTE.C3, NOTE.E3, NOTE.G3, NOTE.C4], d: q * 8 },
+    ];
+
+    for (const ch of chords) {
+      for (const f of ch.notes) {
+        seq.push({ t: ch.t, freq: f, d: ch.d, wave: 'sine', vol: 0.05 });
+      }
+    }
+
+    // ── Bass: driving root notes (square wave — punchy) ──
+    const bass = [
+      { t: 0,       freq: NOTE.C3,  d: q },
+      { t: q * 2,   freq: NOTE.C3,  d: q },
+      { t: q * 4,   freq: NOTE.C3,  d: q },
+      { t: q * 5,   freq: NOTE.G3,  d: q },
+      { t: q * 7,   freq: NOTE.F3,  d: q },
+      { t: q * 8,   freq: NOTE.F3,  d: q },
+      { t: q * 10,  freq: NOTE.G3,  d: q },
+      { t: q * 12,  freq: NOTE.G3,  d: q },
+      { t: q * 14,  freq: NOTE.G3,  d: q },
+      { t: q * 15,  freq: NOTE.C3,  d: q },
+      { t: q * 16,  freq: NOTE.C3,  d: q },
+      { t: q * 18,  freq: NOTE.C3,  d: h },
+      { t: q * 20,  freq: NOTE.G3,  d: q },
+      { t: q * 22,  freq: NOTE.C3,  d: w },
+    ];
+
+    for (const n of bass) {
+      seq.push({ t: n.t, freq: n.freq, d: n.d, wave: 'square', vol: 0.05 });
+    }
+
+    // ── Drums: celebratory march beat ──
+    const drums = [
+      // Intro hits
+      { t: 0,       drum: 'kick' },
+      { t: e,       drum: 'hat' },
+      { t: q,       drum: 'hat' },
+      { t: q * 2,   drum: 'kick' },
+      { t: q * 2 + e, drum: 'hat' },
+      { t: q * 3,   drum: 'snare' },
+      { t: q * 3 + e, drum: 'hat' },
+      // Driving section
+      { t: q * 4,   drum: 'kick' },
+      { t: q * 4 + e, drum: 'hat' },
+      { t: q * 5,   drum: 'hat' },
+      { t: q * 6,   drum: 'kick' },
+      { t: q * 6 + e, drum: 'hat' },
+      { t: q * 7,   drum: 'snare' },
+      // Build-up
+      { t: q * 8,   drum: 'kick' },
+      { t: q * 8 + e, drum: 'hat' },
+      { t: q * 9,   drum: 'hat' },
+      { t: q * 10,  drum: 'kick' },
+      { t: q * 10 + e, drum: 'hat' },
+      { t: q * 11,  drum: 'snare' },
+      { t: q * 12,  drum: 'kick' },
+      { t: q * 13,  drum: 'snare' },
+      { t: q * 14,  drum: 'kick' },
+      { t: q * 14 + e, drum: 'snare' },
+      // Triumphant climax
+      { t: q * 15,  drum: 'kick' },
+      { t: q * 16,  drum: 'kick' },
+      { t: q * 17,  drum: 'snare' },
+      { t: q * 18,  drum: 'kick' },
+      { t: q * 18 + e, drum: 'hat' },
+      { t: q * 19,  drum: 'hat' },
+      { t: q * 20,  drum: 'kick' },
+      { t: q * 21,  drum: 'snare' },
+      { t: q * 22,  drum: 'kick' },
+    ];
+
+    for (const d of drums) {
+      seq.push({ t: d.t, drum: d.drum });
+    }
+
+    this._schedule(seq, false);
+  }
+
   // ── internal ──────────────────────────────────────────────
 
   _play(name) {
@@ -260,6 +570,9 @@ export class ProceduralMusic {
     else if (name === 'level1') seq = this._level1();
     else if (name === 'level2') seq = this._level2();
     else if (name === 'level3') seq = this._level3();
+    else if (name === 'level4') seq = this._level4();
+    else if (name === 'level5') seq = this._level5();
+    else if (name === 'level6') seq = this._level6();
     else seq = this._level1(); // default
     this._schedule(seq, true);
   }
@@ -289,6 +602,9 @@ export class ProceduralMusic {
           else if (this._track === 'level1') seq = this._level1();
           else if (this._track === 'level2') seq = this._level2();
           else if (this._track === 'level3') seq = this._level3();
+          else if (this._track === 'level4') seq = this._level4();
+          else if (this._track === 'level5') seq = this._level5();
+          else if (this._track === 'level6') seq = this._level6();
           else seq = this._level1(); // default
           this._schedule(seq, true);
         }
@@ -1037,6 +1353,516 @@ export class ProceduralMusic {
       seq.push({ t: bt + e,     drum: 'hat',  freq: 0 });
       seq.push({ t: bt + q,     drum: 'snare', freq: 0 });
       seq.push({ t: bt + q + e, drum: 'hat',  freq: 0 });
+    }
+
+    return seq;
+  }
+
+  /** Level 4: D minor — Driving and intense (8 bars A repeated + 16 bars B) */
+  _level4() {
+    const bpm = 145;
+    const q = 60 / bpm;
+    const h = q * 2;
+
+    const sectionA = this._level4SectionA();
+    const sectionADuration = 8 * h;
+    const sectionARepeat = sectionA.map(note => ({
+      ...note,
+      t: note.t + sectionADuration
+    }));
+    const sectionB = this._level4SectionB(sectionADuration * 2);
+
+    return [...sectionA, ...sectionARepeat, ...sectionB];
+  }
+
+  /** Level 4 Section A (8 bars): Driving D minor melody */
+  _level4SectionA() {
+    const bpm = 145;
+    const q = 60 / bpm;
+    const e = q / 2;
+    const h = q * 2;
+    const seq = [];
+
+    // Lead Melody (D minor - driving, intense)
+    const melody = [
+      NOTE.D5, NOTE.F5, NOTE.A4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.F4,
+      NOTE.E4, NOTE.G4, NOTE.A4, NOTE.D5, NOTE.F5, NOTE.E5, NOTE.D5, NOTE.A4,
+      NOTE.D5, NOTE.A5, NOTE.F5, NOTE.D5, NOTE.E5, NOTE.F5, NOTE.G5, NOTE.A5,
+      NOTE.G5, NOTE.F5, NOTE.E5, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.D5, NOTE.F5,
+    ];
+    for (let i = 0; i < melody.length; i++) {
+      seq.push({
+        t: i * e,
+        freq: melody[i],
+        d: e * 0.95,
+        wave: 'square',
+        vol: 0.06
+      });
+    }
+
+    // Harmony 1 (triangle, D minor chord tones)
+    const harmony1 = [
+      NOTE.D4, NOTE.F4, NOTE.A4, NOTE.F4, NOTE.G4, NOTE.E4, NOTE.A4, NOTE.G4,
+      NOTE.F4, NOTE.A4, NOTE.D4, NOTE.F4, NOTE.G4, NOTE.E4, NOTE.F4, NOTE.D4,
+    ];
+    for (let i = 0; i < harmony1.length; i++) {
+      seq.push({ t: i * q, freq: harmony1[i], d: q * 0.95, wave: 'triangle', vol: 0.04 });
+    }
+
+    // Harmony 2 (sine pad)
+    const harmony2 = [NOTE.F4, NOTE.A4, NOTE.G4, NOTE.E4, NOTE.F4, NOTE.D4, NOTE.G4, NOTE.A4];
+    for (let i = 0; i < harmony2.length; i++) {
+      seq.push({ t: i * h, freq: harmony2[i], d: h * 0.98, wave: 'sine', vol: 0.035 });
+    }
+
+    // Bass (D minor progression: Dm → Am → Bb → C)
+    const bass = [NOTE.D3, NOTE.A3, NOTE.B3, NOTE.C3, NOTE.D3, NOTE.F3, NOTE.G3, NOTE.A3];
+    for (let i = 0; i < bass.length; i++) {
+      seq.push({ t: i * h, freq: bass[i], d: h * 0.98, wave: 'triangle', vol: 0.10 });
+    }
+
+    // Drums (driving pattern with extra kick)
+    for (let bar = 0; bar < 8; bar++) {
+      const bt = bar * h;
+      seq.push({ t: bt,             drum: 'kick', freq: 0 });
+      seq.push({ t: bt + e,         drum: 'hat',  freq: 0 });
+      seq.push({ t: bt + q,         drum: 'snare', freq: 0 });
+      seq.push({ t: bt + q + e,     drum: 'hat',  freq: 0 });
+    }
+
+    return seq;
+  }
+
+  /** Level 4 Section B (16 bars): Milder D minor variation */
+  _level4SectionB(startTime) {
+    const bpm = 145;
+    const q = 60 / bpm;
+    const e = q / 2;
+    const h = q * 2;
+    const seq = [];
+
+    // Simpler Lead Melody
+    const simpleLead = [
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.F5, dur: h },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.D5, dur: q },
+      { note: NOTE.C5, dur: h },
+      { note: NOTE.F5, dur: q },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.G4, dur: q },
+      { note: NOTE.F4, dur: h },
+      // Repeat
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.F5, dur: h },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.D5, dur: q },
+      { note: NOTE.C5, dur: h },
+      { note: NOTE.F5, dur: q },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.G4, dur: q },
+      { note: NOTE.F4, dur: h },
+    ];
+
+    let time = startTime;
+    for (const { note, dur } of simpleLead) {
+      seq.push({
+        t: time,
+        freq: note,
+        d: dur * 0.98,
+        wave: 'square',
+        vol: 0.045
+      });
+      time += dur;
+    }
+
+    // Baritone Harmony
+    const baritone = [
+      NOTE.F3, NOTE.A3, NOTE.D3, NOTE.F3, NOTE.G3, NOTE.E3, NOTE.A3, NOTE.C3,
+      NOTE.D3, NOTE.F3, NOTE.A3, NOTE.D3, NOTE.G3, NOTE.E3, NOTE.F3, NOTE.A3,
+      NOTE.F3, NOTE.A3, NOTE.D3, NOTE.F3, NOTE.G3, NOTE.E3, NOTE.A3, NOTE.C3,
+      NOTE.D3, NOTE.F3, NOTE.A3, NOTE.D3, NOTE.G3, NOTE.E3, NOTE.F3, NOTE.A3,
+    ];
+    for (let i = 0; i < baritone.length; i++) {
+      seq.push({
+        t: startTime + i * q,
+        freq: baritone[i],
+        d: q * 0.95,
+        wave: 'triangle',
+        vol: 0.055
+      });
+    }
+
+    // Bass
+    const bass = [
+      NOTE.D3, NOTE.A3, NOTE.B3, NOTE.C3,
+      NOTE.D3, NOTE.F3, NOTE.G3, NOTE.A3,
+      NOTE.D3, NOTE.A3, NOTE.B3, NOTE.C3,
+      NOTE.D3, NOTE.F3, NOTE.G3, NOTE.A3,
+    ];
+    for (let i = 0; i < bass.length; i++) {
+      seq.push({
+        t: startTime + i * h,
+        freq: bass[i],
+        d: h * 0.98,
+        wave: 'triangle',
+        vol: 0.10
+      });
+    }
+
+    // Drums
+    for (let bar = 0; bar < 16; bar++) {
+      const bt = startTime + bar * h;
+      seq.push({ t: bt,         drum: 'kick', freq: 0 });
+      seq.push({ t: bt + e,     drum: 'hat',  freq: 0 });
+      seq.push({ t: bt + q,     drum: 'snare', freq: 0 });
+      seq.push({ t: bt + q + e, drum: 'hat',  freq: 0 });
+    }
+
+    return seq;
+  }
+
+  /** Level 5: E minor — Tense and urgent (8 bars A repeated + 16 bars B) */
+  _level5() {
+    const bpm = 150;
+    const q = 60 / bpm;
+    const h = q * 2;
+
+    const sectionA = this._level5SectionA();
+    const sectionADuration = 8 * h;
+    const sectionARepeat = sectionA.map(note => ({
+      ...note,
+      t: note.t + sectionADuration
+    }));
+    const sectionB = this._level5SectionB(sectionADuration * 2);
+
+    return [...sectionA, ...sectionARepeat, ...sectionB];
+  }
+
+  /** Level 5 Section A (8 bars): Tense E minor melody */
+  _level5SectionA() {
+    const bpm = 150;
+    const q = 60 / bpm;
+    const e = q / 2;
+    const h = q * 2;
+    const seq = [];
+
+    // Lead Melody (E minor - tense, urgent)
+    const melody = [
+      NOTE.E5, NOTE.G5, NOTE.B4, NOTE.E5, NOTE.D5, NOTE.B4, NOTE.A4, NOTE.G4,
+      NOTE.A4, NOTE.B4, NOTE.E5, NOTE.G5, NOTE.A5, NOTE.G5, NOTE.E5, NOTE.D5,
+      NOTE.B4, NOTE.D5, NOTE.E5, NOTE.G5, NOTE.A5, NOTE.G5, NOTE.E5, NOTE.B4,
+      NOTE.E5, NOTE.D5, NOTE.B4, NOTE.G4, NOTE.A4, NOTE.B4, NOTE.D5, NOTE.E5,
+    ];
+    for (let i = 0; i < melody.length; i++) {
+      seq.push({
+        t: i * e,
+        freq: melody[i],
+        d: e * 0.95,
+        wave: 'square',
+        vol: 0.058
+      });
+    }
+
+    // Harmony 1 (triangle, E minor chord tones)
+    const harmony1 = [
+      NOTE.E4, NOTE.G4, NOTE.B4, NOTE.G4, NOTE.A4, NOTE.C4, NOTE.B4, NOTE.D4,
+      NOTE.E4, NOTE.B4, NOTE.G4, NOTE.E4, NOTE.A4, NOTE.C4, NOTE.D4, NOTE.B4,
+    ];
+    for (let i = 0; i < harmony1.length; i++) {
+      seq.push({ t: i * q, freq: harmony1[i], d: q * 0.95, wave: 'triangle', vol: 0.038 });
+    }
+
+    // Harmony 2 (sine pad — tense voicing)
+    const harmony2 = [NOTE.G4, NOTE.B4, NOTE.A4, NOTE.D4, NOTE.E4, NOTE.G4, NOTE.A4, NOTE.B4];
+    for (let i = 0; i < harmony2.length; i++) {
+      seq.push({ t: i * h, freq: harmony2[i], d: h * 0.98, wave: 'sine', vol: 0.032 });
+    }
+
+    // Bass (E minor progression: Em → Bm → C → D)
+    const bass = [NOTE.E3, NOTE.B3, NOTE.C3, NOTE.D3, NOTE.E3, NOTE.G3, NOTE.A3, NOTE.B3];
+    for (let i = 0; i < bass.length; i++) {
+      seq.push({ t: i * h, freq: bass[i], d: h * 0.98, wave: 'triangle', vol: 0.10 });
+    }
+
+    // Drums (urgent feel with faster hats)
+    for (let bar = 0; bar < 8; bar++) {
+      const bt = bar * h;
+      seq.push({ t: bt,             drum: 'kick',  freq: 0 });
+      seq.push({ t: bt + e,         drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + e * 2,     drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + q,         drum: 'snare', freq: 0 });
+      seq.push({ t: bt + q + e,     drum: 'hat',   freq: 0 });
+    }
+
+    return seq;
+  }
+
+  /** Level 5 Section B (16 bars): Milder E minor variation */
+  _level5SectionB(startTime) {
+    const bpm = 150;
+    const q = 60 / bpm;
+    const e = q / 2;
+    const h = q * 2;
+    const seq = [];
+
+    // Simpler Lead Melody (brooding)
+    const simpleLead = [
+      { note: NOTE.E5, dur: h },
+      { note: NOTE.G5, dur: h },
+      { note: NOTE.B4, dur: q },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.G5, dur: q },
+      { note: NOTE.A5, dur: q },
+      { note: NOTE.G5, dur: h },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: q },
+      { note: NOTE.B4, dur: h },
+      // Repeat
+      { note: NOTE.E5, dur: h },
+      { note: NOTE.G5, dur: h },
+      { note: NOTE.B4, dur: q },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.G5, dur: q },
+      { note: NOTE.A5, dur: q },
+      { note: NOTE.G5, dur: h },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: q },
+      { note: NOTE.B4, dur: h },
+    ];
+
+    let time = startTime;
+    for (const { note, dur } of simpleLead) {
+      seq.push({
+        t: time,
+        freq: note,
+        d: dur * 0.98,
+        wave: 'square',
+        vol: 0.042
+      });
+      time += dur;
+    }
+
+    // Baritone Harmony
+    const baritone = [
+      NOTE.G3, NOTE.B3, NOTE.E3, NOTE.G3, NOTE.A3, NOTE.C3, NOTE.D3, NOTE.B3,
+      NOTE.E3, NOTE.G3, NOTE.B3, NOTE.E3, NOTE.A3, NOTE.C3, NOTE.B3, NOTE.D3,
+      NOTE.G3, NOTE.B3, NOTE.E3, NOTE.G3, NOTE.A3, NOTE.C3, NOTE.D3, NOTE.B3,
+      NOTE.E3, NOTE.G3, NOTE.B3, NOTE.E3, NOTE.A3, NOTE.C3, NOTE.B3, NOTE.D3,
+    ];
+    for (let i = 0; i < baritone.length; i++) {
+      seq.push({
+        t: startTime + i * q,
+        freq: baritone[i],
+        d: q * 0.95,
+        wave: 'triangle',
+        vol: 0.052
+      });
+    }
+
+    // Bass
+    const bass = [
+      NOTE.E3, NOTE.B3, NOTE.C3, NOTE.D3,
+      NOTE.E3, NOTE.G3, NOTE.A3, NOTE.B3,
+      NOTE.E3, NOTE.B3, NOTE.C3, NOTE.D3,
+      NOTE.E3, NOTE.G3, NOTE.A3, NOTE.B3,
+    ];
+    for (let i = 0; i < bass.length; i++) {
+      seq.push({
+        t: startTime + i * h,
+        freq: bass[i],
+        d: h * 0.98,
+        wave: 'triangle',
+        vol: 0.10
+      });
+    }
+
+    // Drums
+    for (let bar = 0; bar < 16; bar++) {
+      const bt = startTime + bar * h;
+      seq.push({ t: bt,             drum: 'kick',  freq: 0 });
+      seq.push({ t: bt + e,         drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + e * 2,     drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + q,         drum: 'snare', freq: 0 });
+      seq.push({ t: bt + q + e,     drum: 'hat',   freq: 0 });
+    }
+
+    return seq;
+  }
+
+  /** Level 6: D minor — Ominous boss battle (8 bars A repeated + 16 bars B) */
+  _level6() {
+    const bpm = 160;
+    const q = 60 / bpm;
+    const h = q * 2;
+
+    const sectionA = this._level6SectionA();
+    const sectionADuration = 8 * h;
+    const sectionARepeat = sectionA.map(note => ({
+      ...note,
+      t: note.t + sectionADuration
+    }));
+    const sectionB = this._level6SectionB(sectionADuration * 2);
+
+    return [...sectionA, ...sectionARepeat, ...sectionB];
+  }
+
+  /** Level 6 Section A (8 bars): Dark D minor boss riff */
+  _level6SectionA() {
+    const bpm = 160;
+    const q = 60 / bpm;
+    const e = q / 2;
+    const h = q * 2;
+    const seq = [];
+
+    // Lead Melody (D minor — dark, ominous, relentless)
+    const melody = [
+      NOTE.D5, NOTE.F5, NOTE.A4, NOTE.D5, NOTE.C5, NOTE.A4, NOTE.F4, NOTE.D4,
+      NOTE.A4, NOTE.Bb4, NOTE.A4, NOTE.G4, NOTE.F4, NOTE.E4, NOTE.D4, NOTE.F4,
+      NOTE.D5, NOTE.F5, NOTE.A5, NOTE.G5, NOTE.F5, NOTE.E5, NOTE.D5, NOTE.C5,
+      NOTE.A4, NOTE.Bb4, NOTE.C5, NOTE.D5, NOTE.A4, NOTE.F4, NOTE.E4, NOTE.D4,
+    ];
+    for (let i = 0; i < melody.length; i++) {
+      seq.push({
+        t: i * e,
+        freq: melody[i],
+        d: e * 0.95,
+        wave: 'square',
+        vol: 0.065
+      });
+    }
+
+    // Harmony 1 (triangle, D minor chord tones — brooding)
+    const harmony1 = [
+      NOTE.D4, NOTE.F4, NOTE.A4, NOTE.D4, NOTE.C4, NOTE.A3, NOTE.F4, NOTE.D4,
+      NOTE.A3, NOTE.C4, NOTE.D4, NOTE.F4, NOTE.E4, NOTE.C4, NOTE.A3, NOTE.D4,
+    ];
+    for (let i = 0; i < harmony1.length; i++) {
+      seq.push({ t: i * q, freq: harmony1[i], d: q * 0.95, wave: 'triangle', vol: 0.042 });
+    }
+
+    // Harmony 2 (sine pad — dark, sustained)
+    const harmony2 = [NOTE.D4, NOTE.F4, NOTE.A4, NOTE.C4, NOTE.D4, NOTE.Bb3, NOTE.A3, NOTE.D4];
+    for (let i = 0; i < harmony2.length; i++) {
+      seq.push({ t: i * h, freq: harmony2[i], d: h * 0.98, wave: 'sine', vol: 0.038 });
+    }
+
+    // Bass (D minor: Dm → Gm → Am → Dm → Dm → Bb → C → Dm)
+    const bass = [NOTE.D3, NOTE.G3, NOTE.A3, NOTE.D3, NOTE.D3, NOTE.Bb3, NOTE.C3, NOTE.D3];
+    for (let i = 0; i < bass.length; i++) {
+      seq.push({ t: i * h, freq: bass[i], d: h * 0.98, wave: 'triangle', vol: 0.11 });
+    }
+
+    // Drums (aggressive double-kick boss pattern)
+    for (let bar = 0; bar < 8; bar++) {
+      const bt = bar * h;
+      seq.push({ t: bt,             drum: 'kick',  freq: 0 });
+      seq.push({ t: bt + e,         drum: 'kick',  freq: 0 });
+      seq.push({ t: bt + e * 2,     drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + e * 3,     drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + q,         drum: 'snare', freq: 0 });
+      seq.push({ t: bt + q + e,     drum: 'kick',  freq: 0 });
+    }
+
+    return seq;
+  }
+
+  /** Level 6 Section B (16 bars): Intensified D minor boss climax */
+  _level6SectionB(startTime) {
+    const bpm = 160;
+    const q = 60 / bpm;
+    const e = q / 2;
+    const h = q * 2;
+    const seq = [];
+
+    // Lead melody — longer, dramatic phrases descending through D minor
+    const simpleLead = [
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.A4, dur: h },
+      { note: NOTE.Bb4, dur: q },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.G4, dur: h },
+      { note: NOTE.F4, dur: q },
+      { note: NOTE.E4, dur: q },
+      { note: NOTE.D4, dur: h },
+      { note: NOTE.F4, dur: q },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.D5, dur: h },
+      // Repeat with darker variation
+      { note: NOTE.D5, dur: h },
+      { note: NOTE.F5, dur: h },
+      { note: NOTE.E5, dur: q },
+      { note: NOTE.D5, dur: q },
+      { note: NOTE.C5, dur: h },
+      { note: NOTE.Bb4, dur: q },
+      { note: NOTE.A4, dur: q },
+      { note: NOTE.G4, dur: h },
+      { note: NOTE.F4, dur: q },
+      { note: NOTE.E4, dur: q },
+      { note: NOTE.D4, dur: h },
+    ];
+
+    let time = startTime;
+    for (const { note, dur } of simpleLead) {
+      seq.push({
+        t: time,
+        freq: note,
+        d: dur * 0.98,
+        wave: 'square',
+        vol: 0.050
+      });
+      time += dur;
+    }
+
+    // Baritone Harmony (menacing, churning)
+    const baritone = [
+      NOTE.D3, NOTE.F3, NOTE.A3, NOTE.D3, NOTE.G3, NOTE.Bb3, NOTE.A3, NOTE.D3,
+      NOTE.C3, NOTE.E3, NOTE.A3, NOTE.C3, NOTE.D3, NOTE.F3, NOTE.E3, NOTE.D3,
+      NOTE.D3, NOTE.F3, NOTE.A3, NOTE.D3, NOTE.G3, NOTE.Bb3, NOTE.A3, NOTE.D3,
+      NOTE.C3, NOTE.E3, NOTE.A3, NOTE.C3, NOTE.D3, NOTE.F3, NOTE.E3, NOTE.D3,
+    ];
+    for (let i = 0; i < baritone.length; i++) {
+      seq.push({
+        t: startTime + i * q,
+        freq: baritone[i],
+        d: q * 0.95,
+        wave: 'triangle',
+        vol: 0.058
+      });
+    }
+
+    // Bass (heavier, relentless D minor pedal)
+    const bass = [
+      NOTE.D3, NOTE.G3, NOTE.A3, NOTE.D3,
+      NOTE.Bb3, NOTE.A3, NOTE.G3, NOTE.D3,
+      NOTE.D3, NOTE.G3, NOTE.A3, NOTE.D3,
+      NOTE.Bb3, NOTE.A3, NOTE.G3, NOTE.D3,
+    ];
+    for (let i = 0; i < bass.length; i++) {
+      seq.push({
+        t: startTime + i * h,
+        freq: bass[i],
+        d: h * 0.98,
+        wave: 'triangle',
+        vol: 0.11
+      });
+    }
+
+    // Drums (relentless double-kick boss pattern)
+    for (let bar = 0; bar < 16; bar++) {
+      const bt = startTime + bar * h;
+      seq.push({ t: bt,             drum: 'kick',  freq: 0 });
+      seq.push({ t: bt + e,         drum: 'kick',  freq: 0 });
+      seq.push({ t: bt + e * 2,     drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + e * 3,     drum: 'hat',   freq: 0 });
+      seq.push({ t: bt + q,         drum: 'snare', freq: 0 });
+      seq.push({ t: bt + q + e,     drum: 'kick',  freq: 0 });
     }
 
     return seq;

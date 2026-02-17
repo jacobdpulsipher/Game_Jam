@@ -25,10 +25,7 @@ export class Terminal extends Phaser.Physics.Arcade.Sprite {
     /** The puzzle element this terminal powers */
     this.linkedElement = null;
 
-    /** Label above terminal */
-    this._label = scene.add.text(x, y - 20, 't', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#f00',
-    }).setOrigin(0.5);
+    // Debug/ID labels removed (visual-only)
   }
 
   /**
@@ -50,8 +47,6 @@ export class Terminal extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.setTexture(value ? 'terminal_powered' : 'terminal');
     }
-    this._label.setColor(value ? '#0f0' : '#f00');
-
     // Activate or deactivate linked element
     if (this.linkedElement) {
       if (value) {

@@ -134,7 +134,7 @@ import { LEVEL_01 } from './Level01.js';
 import { LEVEL_02 } from './Level02.js';
 import { LEVEL_03 } from './Level03.js';
 import { LEVEL_04 } from './Level04.js';
-import { LEVEL_05 } from './Level05.js';
+import { LEVEL_06 } from './Level06.js';
 import {
   TUT_01, TUT_02, TUT_03, TUT_04,
   TUT_05, TUT_06, TUT_07, TUT_08,
@@ -148,7 +148,7 @@ const LEVELS = [
   LEVEL_02,
   LEVEL_03,
   LEVEL_04,
-  LEVEL_05,
+  LEVEL_06,
 ];
 
 /** Lookup a level by id. */

@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import { PLAYER } from '../config.js';
+import { music } from '../audio/ProceduralMusic.js';
 
 /**
  * Player — the hero electrician.
  *
  * Controls:
- *   A/D or Left/Right — move
- *   W or Up or Space  — jump
- *   E                 — action: plug/unplug extension cord at nearby terminal
+ *   Arrow keys        — move / jump
+ *   Space             — jump
+ *   D                 — action: plug/unplug extension cord at nearby terminal
  *   F                 — interact: grab/release push block
  *
  * State:
@@ -38,6 +39,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Play idle animation immediately
     this.play('idle');
+
+    // Render player in front of puzzle elements (push blocks, etc.)
+    this.setDepth(10);
 
     /** Spawn / respawn coordinates */
     this.spawnX = x;
@@ -71,9 +75,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // --- Input ---
     this.cursors = scene.input.keyboard.createCursorKeys();
     this.keys = scene.input.keyboard.addKeys({
-      left: 'A', right: 'D', up: 'W',
       jump: 'SPACE',
-      action: 'E',     // plug/unplug cord
+      action: 'D',     // plug/unplug cord
       interact: 'F',   // grab/release block
     });
 
@@ -82,21 +85,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._interactJustPressed = false;
   }
 
+  /**
+   * Returns true if the player is supported by the world (ground/platform)
+   * or standing on a moving elevator.
+   */
+  isSupported() {
+    if (this.body.blocked.down) return true;
+
+    // Arcade Physics can report blocked.down=false on moving static bodies.
+    // Detect standing on elevator tops so grabbing/jumping behaves correctly.
+    const elevs = this.scene?._elevators;
+    if (!elevs || elevs.length === 0) return false;
+
+    const px = this.x;
+    const py = this.y + this.body.halfHeight;
+    for (const elev of elevs) {
+      const ex = elev.x;
+      const ey = elev.y - elev._h / 2;
+      const onTop = Math.abs(px - ex) < elev._w / 2 + 4 &&
+                    Math.abs(py - ey) < 8;
+      if (onTop) return true;
+    }
+    return false;
+  }
+
   /** Called every frame from GameScene.update(). */
   update() {
     if (this._isDead) return;
     if (this._isAttacking) return; // freeze movement during attack
     if (this._isRepairing) return; // freeze during repair cutscene
 
-    const onGround = this.body.blocked.down;
+    const onGround = this.isSupported();
     const isMoving = Math.abs(this.body.velocity.x) > 5; // Small threshold to ignore tiny movements
 
     // --- Horizontal movement ---
-    if (this.cursors.left.isDown || this.keys.left.isDown) {
+    if (this.cursors.left.isDown) {
       this.setVelocityX(-PLAYER.SPEED);
       this.facingRight = false;
       this.setFlipX(true);
-    } else if (this.cursors.right.isDown || this.keys.right.isDown) {
+    } else if (this.cursors.right.isDown) {
       this.setVelocityX(PLAYER.SPEED);
       this.facingRight = true;
       this.setFlipX(false);
@@ -115,13 +142,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // --- Jump ---
-    if ((this.cursors.up.isDown || this.keys.up.isDown || this.keys.jump.isDown) && onGround) {
+    if ((this.cursors.up.isDown || this.keys.jump.isDown) && onGround) {
       // Release block before jumping
       if (this.grabbedBlock) this.releaseBlock();
       this.setVelocityY(PLAYER.JUMP_VELOCITY);
     }
 
-    // --- Action button (E) — plug / unplug cord ---
+    // --- Action button (D) — plug / unplug cord ---
     const actionDown = this.keys.action.isDown;
     if (actionDown && !this._actionJustPressed) {
       this._actionJustPressed = true;
@@ -130,6 +157,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!actionDown) this._actionJustPressed = false;
 
     // --- Interact button (F) — grab / release block ---
+
     const interactDown = this.keys.interact.isDown;
     if (interactDown && !this._interactJustPressed) {
       this._interactJustPressed = true;
@@ -257,6 +285,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Disconnect cord
     this.disconnectCord();
     this.scene.events.emit('cord-changed', null);
+
+    // Death sound
+    music.playDeath();
 
     // Visual flash
     this.setTint(0xff0000);
