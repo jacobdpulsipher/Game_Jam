@@ -29,8 +29,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const w = opts.width ?? ENEMY.WIDTH;
     const h = opts.height ?? ENEMY.HEIGHT;
 
-    // Use the procedurally generated enemy texture
-    super(scene, opts.x, opts.y, 'enemy');
+    // Prefer hoodlum spritesheet if available; fallback to procedural placeholder
+    const textureKey = scene.textures.exists('hoodlum') ? 'hoodlum' : 'enemy';
+    super(scene, opts.x, opts.y, textureKey);
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -39,6 +40,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this._rangeLeft = opts.rangeLeft;
     this._rangeRight = opts.rangeRight;
     this._alive = true;
+    this._usesHoodlumSprite = textureKey === 'hoodlum';
 
     // Set up physics body — sized to match the enemy sprite
     this.body.setSize(w, h);
@@ -50,6 +52,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const dir = opts.direction === 'left' ? -1 : 1;
     this.setVelocityX(this._speed * dir);
     if (dir === -1) this.setFlipX(true);
+
+    if (this._usesHoodlumSprite && scene.anims.exists('hoodlum_walk')) {
+      this.play('hoodlum_walk');
+    }
 
     // Debug label
     if (opts.label) {
@@ -65,6 +71,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** Called every frame from GameScene.update(). */
   update() {
     if (!this._alive) return;
+
+    if (this._usesHoodlumSprite && this.anims && this.scene.anims.exists('hoodlum_walk')) {
+      if (!this.anims.isPlaying || this.anims.currentAnim?.key !== 'hoodlum_walk') {
+        this.play('hoodlum_walk');
+      }
+    }
 
     // Reverse at patrol boundaries
     if (this.x <= this._rangeLeft) {

@@ -94,6 +94,7 @@ Hero is an electrician who connects extension cords from generators to terminals
 ## Enemies & Heavy Blocks
 - [x] Created `src/entities/Enemy.js` — patrolling hazard with kill/death animation, flip-on-wall, plug-attack vulnerability
 - [x] Created `src/entities/HeavyBlock.js` — immovable gravity block with skirt body, top platform, industrial texture
+- [x] Added `src/assets/HoodlumSprite.js` + `src/assets/hoodlum.png` — runtime enemy spritesheet generator with joint-based walk animation (`hoodlum_walk`)
 
 ## Tutorial & Level 5
 - [x] Created `src/levels/LevelTutorial.js` — guided walkthrough level with tutorialPopups for every mechanic
@@ -139,8 +140,10 @@ src/
 ├── config.js            # All constants (dimensions, speeds, physics values)
 ├── assets/
 │   ├── AssetTextures.js # Procedural texture generators
+│   ├── HoodlumSprite.js # Hoodlum enemy spritesheet builder (from hoodlum.png)
 │   ├── SparkySprite.js  # Sparky Joe hero spritesheet builder
 │   ├── SparkyJoe_clean.png  # Character image for menu screen
+│   ├── hoodlum.png      # Hoodlum source pose (converted to animated spritesheet at runtime)
 │   └── WorkerSprite.js  # Worker reference sprite
 ├── audio/
 │   └── ProceduralMusic.js    # Web Audio API chiptune synthesizer + SFX (zap, clang, blast, power-up)

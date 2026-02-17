@@ -5,8 +5,10 @@ import { generateOutlet, generatePlug, generateWoodenCrate } from '../assets/Ass
 import { generateLamppost, generateLamppostGlow } from '../assets/EnvironmentTextures.js';
 import { generateWorkerSprite } from '../assets/WorkerSprite.js';
 import { generateMentorFace } from '../assets/MentorFace.js';
+import { generateHoodlumSprite } from '../assets/HoodlumSprite.js';
 import sparkyJoeMenuUrl from '../assets/SparkyJoe_clean.png';
 import mentorBigUrl from '../assets/mentor_big.png';
+import hoodlumUrl from '../assets/hoodlum.png';
 
 // Relative crop box (0..1) into mentor_big to create a zoomed bust portrait.
 // If you want it tighter/looser, tweak these numbers.
@@ -27,6 +29,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // Load mentor portrait for tutorial radio popups
     this.load.image('mentor_big', mentorBigUrl);
+
+    // Load hoodlum base pose (used to build the animated enemy sheet)
+    this.load.image('hoodlum_src', hoodlumUrl);
   }
 
   create() {
@@ -96,6 +101,20 @@ export class PreloadScene extends Phaser.Scene {
 
     // Enemy texture
     this._generateEnemyTexture();
+
+    // --- Generate the hoodlum enemy sprite sheet + walking animation ---
+    // (If the PNG is missing or fails, game will fall back to procedural 'enemy')
+    if (this.textures.exists('hoodlum_src')) {
+      const hoodlumData = generateHoodlumSprite(this);
+      if (!this.anims.exists(hoodlumData.animations.walk.key)) {
+        this.anims.create({
+          key: hoodlumData.animations.walk.key,
+          frames: hoodlumData.animations.walk.frames,
+          frameRate: hoodlumData.animations.walk.frameRate,
+          repeat: hoodlumData.animations.walk.repeat,
+        });
+      }
+    }
 
     // City-scape ground tiles (replaces plain grey 'ground' rect)
     this._generateGroundTexture();

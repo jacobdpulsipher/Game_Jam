@@ -10,7 +10,7 @@ The player navigates through a series of interconnected puzzle rooms in a 2D sid
 - **Engine:** Phaser 3 (v3.80+)
 - **Language:** JavaScript (ES Modules)
 - **Build:** Vite
-- **Art Pipeline:** Mostly procedural textures at runtime; character PNG (`SparkyJoe_clean.png`) loaded for menu screen
+- **Art Pipeline:** Mostly procedural textures at runtime; character PNG (`SparkyJoe_clean.png`) loaded for menu screen. Enemies can be built from a single-pose PNG (see `src/assets/HoodlumSprite.js`).
 - **Audio:** Web Audio API chiptune synthesizer (procedural, no external audio files)
 
 ## Project Structure
