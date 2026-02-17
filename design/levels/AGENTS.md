@@ -29,5 +29,17 @@ Each file describes one level's layout, puzzle sequence, and solution.
 
 ## Adding New Levels
 1. Create a level design doc here.
-2. Add a new `_buildLevel()` variant in GameScene (or create a new scene).
-3. Document puzzle layout, solution, and difficulty.
+2. Create a level data file in `src/levels/` following the schema in `LevelRegistry.js`.
+3. Import the new level in `LevelRegistry.js` and add it to the `LEVELS` array.
+4. Set the previous level's `nextLevel` to the new level's `id`.
+5. Follow the design rules in `design/map-design-rules.md`.
+
+## Current Level Lineup
+| ID | Name | Type | Description |
+|----|------|------|-------------|
+| `tut_1`–`tut_8` | Tutorial 1–8 | Tutorial | 8 self-contained mini-rooms teaching mechanics with popup hints |
+| `level_01` | First Steps | Gameplay | Intro: cord, door, block, elevator |
+| `level_02` | Bridge the Gap | Gameplay | Drawbridge + spikes |
+| `level_03` | Dead Weight | Gameplay | Heavy block barrier puzzle |
+| `level_04` | Power Climb | Gameplay | Staircase ascent, block transport, generator activation |
+| `level_06` | The Gauntlet | Gameplay | Final level, multi-enemy gauntlet with elevator puzzle |

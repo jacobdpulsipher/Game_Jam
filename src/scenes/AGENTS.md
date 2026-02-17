@@ -12,10 +12,10 @@ BootScene → PreloadScene → MenuScene → GameScene (+ UIScene overlay)
 | Scene          | Key           | Role |
 |----------------|---------------|------|
 | `BootScene`    | `BootScene`   | Minimal setup — transitions immediately to PreloadScene. |
-| `PreloadScene` | `PreloadScene`| Loads `SparkyJoe_clean.png` for the menu character display. Generates all procedural textures (doors, elevators, crates, outlets, plugs, ground, ledges) and the Sparky Joe spritesheet. Registers idle/run/grab/jump/fall animations. Transitions to MenuScene. |
+| `PreloadScene` | `PreloadScene`| Loads PNGs (`SparkyJoe_clean.png`, `hoodlum.png`, `mentor_small.png`) for menu/in-game use. Generates all procedural textures (doors, elevators, crates, outlets, plugs, ground, ledges, lampposts) and sprite sheets (Sparky Joe, hoodlum, mentor). Registers idle/run/grab/jump/fall animations. Transitions to MenuScene. |
 | `MenuScene`    | `MenuScene`   | Title screen with dark city skyline backdrop. "Start Game" button + **Level Select** buttons for every level (click or press number keys 1–9). Enter/Space keyboard shortcuts. Plays menu music on first user interaction. |
 | `GameScene`    | `GameScene`   | **Data-driven** core gameplay. Receives `{ levelId }` from scene data, loads a level definition from `LevelRegistry`, and instantiates all platforms, entities, and puzzle elements from the data object. Handles collisions, cord/block events, door propping, goal detection, and level transitions (via `data.nextLevel`). |
-| `UIScene`      | `UIScene`     | HUD overlay running on top of GameScene. (Currently empty.) |
+| `UIScene`      | `UIScene`     | HUD overlay running on top of GameScene. Currently empty — previously displayed cord-connection debug HUD. |
 
 ## GameScene Details
 - Receives `{ levelId }` via `scene.start()` data; falls back to `getFirstLevel()` if omitted

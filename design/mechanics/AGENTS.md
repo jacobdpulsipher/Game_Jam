@@ -41,6 +41,36 @@ Detailed specs for the game's core mechanics.
 - **Unpowered:** returns to startY (resting position) and stops
 - Configurable: dimensions, speed, pause duration, positions
 
+### Drawbridge
+- **Powered:** rotates from vertical (hanging down) to horizontal (walkable bridge)
+- **Unpowered:** rotates back to vertical
+- Uses a separate static `bridgeBody` for walkable surface
+- Configurable: width, speed, direction (`right` / `left`)
+
+### Spikes
+- Hazard zone — kills player on overlap
+- Can be neutralised by pushing a block over them (`neutralise()`)
+- Configurable width
+
+### Heavy Block
+- Immovable block the player CANNOT push or grab
+- Falls with gravity when its support is removed
+- Has a thin `topPlatform` for standing on and a `skirt` blocking horizontal passage
+- Used as barriers and platforms in puzzle design
+
+### Enemies
+- Patrolling hazards — walk left/right between configurable boundaries
+- Kill the player on touch (same as spikes)
+- Can only be killed by the dangling extension cord plug (when NOT connected to a terminal)
+- 32×32 px — short enough for the hero (48×64) to jump over
+- Used to add timing/action challenges to puzzle levels
+
+### Secondary Generator Activation
+- Generators can be `isPrimary: false` (secondary)
+- Activated by pressing E nearby (no cord required) or by trigger zones
+- `autoActivateIds` — permanently powers listed element IDs
+- Linked elements get `_permanentlyPowered = true`, blocking deactivation
+
 ## Design Pillars
 1. **Clarity** — The player should always see cause and effect.
 2. **Connectedness** — Puzzles embody "everything is connected" via cord wiring.

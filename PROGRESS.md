@@ -59,11 +59,12 @@ Hero is an electrician who connects extension cords from generators to terminals
 - [x] Created `src/audio/ProceduralMusic.js` — Web Audio API chiptune synth (menu/level/victory tracks)
 - [x] Wired music into MenuScene (playMenu on interaction) and GameScene (playLevel, playVictory)
 
-## Levels 3–5
+## Levels 3–6
 - [x] Created `src/levels/Level03.js` — "Dead Weight" (medium difficulty, heavy block + push block barrier puzzle)
 - [x] Created `src/levels/Level04.js` — "Power Climb" (staircase ascent, block transport, E-key generator activation)
-- [x] Created `src/levels/Level05.js` — "Tower Descent" (hard, tall vertical level, multiple routes, chained elevators)
-- [x] Updated `LevelRegistry.js` to include all 5 levels with proper chaining
+- [x] Removed `src/levels/Level05.js` (superseded by Level06)
+- [x] Created `src/levels/Level06.js` — "The Gauntlet" (final level, multi-step puzzle with elevator, 4 enemies, push block)
+- [x] Updated `LevelRegistry.js` to include all levels with proper chaining
 - [x] Created `src/systems/TriggerZone.js` — invisible zones that auto-activate elements on player overlap
 - [x] Created `src/systems/GeneratorSystem.js` — manages generators, element registration, auto-activation
 
@@ -96,9 +97,9 @@ Hero is an electrician who connects extension cords from generators to terminals
 - [x] Created `src/entities/HeavyBlock.js` — immovable gravity block with skirt body, top platform, industrial texture
 - [x] Added `src/assets/HoodlumSprite.js` + `src/assets/hoodlum.png` — runtime enemy spritesheet generator with joint-based walk animation (`hoodlum_walk`)
 
-## Tutorial & Level 5
-- [x] Created `src/levels/LevelTutorial.js` — guided walkthrough level with tutorialPopups for every mechanic
-- [x] Created `src/levels/Level05.js` — "Tower Descent" (hard, tall vertical, multiple routes, chained elevators, enemies)
+## Tutorial & Level 6
+- [x] Created `src/levels/LevelTutorial.js` — 8 self-contained tutorial mini-rooms (`TUT_01` – `TUT_08`), each teaching one mechanic with popup hints. Chains into Level 01 on completion.
+- [x] Created `src/levels/Level06.js` — "The Gauntlet" (final level, multi-step puzzle with elevator, enemy encounters, push block platforming)
 
 ## Sound Effects
 - [x] Added `playElectricZap()` — crackly static + zap SFX for plug connect/disconnect (~0.7s, 6 audio layers)
@@ -113,6 +114,14 @@ Hero is an electrician who connects extension cords from generators to terminals
 - [x] Created `tools/segment-sprite.cjs` — body part segmenter for puppet animation
 - [x] Created `tools/build-sprite.cjs` — 8-part body rotation spritesheet generator
 - [x] Created `tools/gen-sparky.cjs` — generates SparkySprite.js from sparky_parts.json
+
+## Mentor / NPC Sprites
+- [x] Created `src/assets/MentorFace.js` — procedural pixel-art portrait for tutorial mentor (skin, hair, moustache)
+- [x] Created `src/assets/MentorSmallSprite.js` — loads `mentor_small.png`, removes white background, outputs clean `'mentor_small'` texture
+- [x] Added `mentor_big.png`, `mentor_small.png` source PNGs to `src/assets/`
+
+## Environment Art
+- [x] Created `src/assets/EnvironmentTextures.js` — procedural texture generators for environmental props (lampposts, decorations, etc.)
 ## Victory Effects
 - [x] Added `_illuminateWindows(duration)` to GameScene — on level completion, building windows across backdrop and midground layers light up
 - [x] City backdrop windows (far + near buildings) overlay warm yellow glow at depth -9 with parallax matching (scrollFactor 0.3)
@@ -120,43 +129,51 @@ Hero is an electrician who connects extension cords from generators to terminals
 - [x] Both layers fade in with Quad.easeIn easing, slightly delayed behind floodlights (20% offset), then gently pulse once fully lit
 - [x] ~10–20% of windows remain dark for realism
 ## Current State
-- **Build:** ✅ Compiles cleanly (35 modules, Vite v5.4.21)
+- **Build:** ✅ Compiles cleanly (Vite v5.4.21)
 - **Physics debug:** OFF (`debug: false` in main.js)
-- **All core mechanics working:** cord, door, block propping, elevator riding, goal detection
-- **Multi-level system:** ✅ 6 levels (tutorial + 5), data-driven GameScene, LevelRegistry with chaining
-- **Art:** Mostly procedural textures; `SparkyJoe_clean.png` loaded for menu character display
-- **Music:** Web Audio API chiptune — menu loop, level loop, victory fanfare
+- **Rendering:** `pixelArt: true`, zoom: 2, FIT scale mode
+- **All core mechanics working:** cord, door, block propping, elevator riding, goal detection, enemy kills
+- **Multi-level system:** ✅ 13 levels total: 8 tutorial mini-rooms (`TUT_01`–`TUT_08`) + 5 gameplay levels (01–04, 06), data-driven GameScene, LevelRegistry with chaining
+- **Art:** Procedural textures + external PNGs (`SparkyJoe_clean.png`, `hoodlum.png`, `mentor_small.png`, `mentor_big.png`). Environment textures for lampposts etc. via `EnvironmentTextures.js`
+- **Music:** Web Audio API chiptune — menu loop, level loop, victory fanfare (`ProceduralMusic.js`). MIDI generator tool (`MusicGenerator.js`)
 - **SFX:** Procedural electric zap (connect/disconnect), metal clang, electric blast, power-up sweep
 - **Enemies:** Patrolling hazards, killable with cord plug attack
-- **Levels 1-2:** Tested and playable
-- **Levels 3-5:** Data files created, not yet play-tested
-- **Tutorial:** Data file created, guided popup system
+- **Tutorial:** 8 self-contained mini-rooms, each teaching one mechanic with popup hints
+- **UIScene:** Currently empty (previously displayed cord-connection debug HUD)
 - **Error overlay:** Present in index.html for debugging (remove for release)
 
 ## Architecture Overview
 ```
 src/
-├── main.js              # Phaser.Game config (800×600, Arcade physics, gravity=900)
-├── config.js            # All constants (dimensions, speeds, physics values)
+├── main.js              # Phaser.Game config (1024×768, Arcade physics, gravity=900, zoom=2)
+├── config.js            # All constants (dimensions, speeds, physics values, scene keys)
 ├── assets/
-│   ├── AssetTextures.js # Procedural texture generators
-│   ├── HoodlumSprite.js # Hoodlum enemy spritesheet builder (from hoodlum.png)
-│   ├── SparkySprite.js  # Sparky Joe hero spritesheet builder
-│   ├── SparkyJoe_clean.png  # Character image for menu screen
-│   ├── hoodlum.png      # Hoodlum source pose (converted to animated spritesheet at runtime)
-│   └── WorkerSprite.js  # Worker reference sprite
+│   ├── AssetTextures.js       # Procedural texture generators (doors, elevators, crates, etc.)
+│   ├── EnvironmentTextures.js # Procedural environment props (lampposts, decorations)
+│   ├── ElectricianSprite.js   # Fallback hero spritesheet builder
+│   ├── SparkySprite.js        # Sparky Joe hero spritesheet builder
+│   ├── HoodlumSprite.js       # Hoodlum enemy spritesheet builder (from hoodlum.png)
+│   ├── MentorFace.js          # Procedural mentor portrait
+│   ├── MentorSmallSprite.js   # Loads + cleans mentor_small.png for in-game use
+│   ├── WorkerSprite.js        # Worker reference sprite
+│   ├── SparkyJoe_clean.png    # Character image for menu screen
+│   ├── SparkyJoe.png          # Original character source
+│   ├── hoodlum.png            # Hoodlum source pose
+│   ├── mentor_big.png         # Mentor character (large)
+│   └── mentor_small.png       # Mentor character (small, for in-game)
 ├── audio/
-│   └── ProceduralMusic.js    # Web Audio API chiptune synthesizer + SFX (zap, clang, blast, power-up)
+│   ├── ProceduralMusic.js     # Web Audio API chiptune synthesizer + SFX
+│   └── MusicGenerator.js      # MIDI music generator tool (requires jsmidgen)
 ├── scenes/
 │   ├── BootScene.js     # → PreloadScene
-│   ├── PreloadScene.js  # Generates textures, registers animations
+│   ├── PreloadScene.js  # Generates textures, registers animations, loads PNGs
 │   ├── MenuScene.js     # Title screen with level select, city backdrop + music
 │   ├── GameScene.js     # Data-driven level builder + gameplay
-│   └── UIScene.js       # HUD overlay (cord status)
+│   └── UIScene.js       # HUD overlay (currently empty)
 ├── entities/
 │   ├── Player.js        # Electrician hero (movement, cord, grab, death/respawn)
-│   ├── Generator.js     # Static power source
-│   ├── Terminal.js       # Power outlet — links cord to puzzle elements
+│   ├── Generator.js     # Static power source (primary + secondary types)
+│   ├── Terminal.js      # Power outlet — links cord to puzzle elements
 │   ├── ExtensionCord.js # Visual cord (bezier) + range checks
 │   ├── Enemy.js         # Patrolling hazard, killable by cord plug attack
 │   ├── HeavyBlock.js    # Immovable gravity block with skirt + top platform
@@ -170,12 +187,12 @@ src/
 │   └── Trigger.js       # Trigger base class
 ├── levels/
 │   ├── LevelRegistry.js # Level list + lookup helpers (getAllLevels for level select)
-│   ├── LevelTutorial.js # "Tutorial" — guided walkthrough with popup hints
+│   ├── LevelTutorial.js # 8 tutorial mini-rooms (TUT_01–TUT_08)
 │   ├── Level01.js       # "First Steps" — intro
 │   ├── Level02.js       # "Bridge the Gap" — drawbridge + spikes
 │   ├── Level03.js       # "Dead Weight" — heavy block barrier puzzle
-│   ├── Level04.js       # "Power Climb" — staircase, block transport, generator activation
-│   └── Level05.js       # "Tower Descent" — tall vertical descent
+│   ├── Level04.js       # "Power Climb" — staircase, block transport
+│   └── Level06.js       # "The Gauntlet" — final level, multi-enemy gauntlet
 ├── systems/
 │   ├── ConnectionSystem.js  # Connection propagation
 │   ├── PuzzleManager.js     # Element factory + registry

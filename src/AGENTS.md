@@ -6,12 +6,12 @@ All game logic lives here. Code is organized by responsibility.
 ## Directory Layout
 | Folder      | Description |
 |-------------|-------------|
-| `assets/`   | Procedural texture generators (`AssetTextures.js`), hero spritesheet builder (`SparkySprite.js`), hoodlum enemy sprite builder (`HoodlumSprite.js` from `hoodlum.png`), character art (`SparkyJoe_clean.png` for menu), and worker sprite (`WorkerSprite.js`). |
-| `audio/`    | Web Audio API chiptune synthesizer (`ProceduralMusic.js`) — menu, level, and victory tracks. |
+| `assets/`   | Procedural texture generators (`AssetTextures.js`, `EnvironmentTextures.js`), hero spritesheet builder (`SparkySprite.js`), hoodlum enemy sprite builder (`HoodlumSprite.js` from `hoodlum.png`), mentor sprites (`MentorFace.js`, `MentorSmallSprite.js` from `mentor_small.png`), character art PNGs (`SparkyJoe_clean.png`, `SparkyJoe.png`, `hoodlum.png`, `mentor_big.png`, `mentor_small.png`), and worker sprite (`WorkerSprite.js`). |
+| `audio/`    | Web Audio API chiptune synthesizer (`ProceduralMusic.js`) — menu, level, and victory tracks + SFX. MIDI generator tool (`MusicGenerator.js`). |
 | `scenes/`   | Phaser Scenes — each manages a distinct phase of the game (boot, preload, menu, gameplay, UI overlay). |
 | `entities/` | Game objects with behavior — the player, generators, terminals, extension cord, spikes. |
 | `puzzles/`  | Reusable puzzle mechanism classes (doors, elevators, drawbridges, push-blocks). All use options-object constructors for easy parameterization. |
-| `levels/`   | Declarative level data files (count varies). Each exports a data object describing platforms, entities, and puzzle elements. `LevelRegistry.js` provides lookup helpers. |
+| `levels/`   | Declarative level data files: 8 tutorial mini-rooms (`LevelTutorial.js`) + 5 gameplay levels (`Level01`–`Level04`, `Level06`). Each exports a data object describing platforms, entities, and puzzle elements. `LevelRegistry.js` provides lookup helpers. |
 | `systems/`  | Cross-cutting systems: `GeneratorSystem.js` (generator management), `TriggerZone.js` (auto-activation zones), `ConnectionSystem.js`, `PuzzleManager.js`. |
 | `utils/`    | Pure helper functions: `math.js` (clamp, lerp), `debug.js` (debug overlays). |
 
@@ -27,6 +27,6 @@ All game logic lives here. Code is organized by responsibility.
 - Phaser lifecycle methods: `preload()`, `create()`, `update(time, delta)`.
 - Puzzle elements implement `activate()` / `deactivate()` interface.
 - Puzzle elements use **options object constructors** for easy dimension/position/behavior tuning.
-- Most textures are generated procedurally in `PreloadScene`. The menu screen loads `SparkyJoe_clean.png` as an external character image.
+- Most textures are generated procedurally in `PreloadScene`. The menu screen loads `SparkyJoe_clean.png` as an external character image. Additional PNGs loaded for enemies (`hoodlum.png`) and NPCs (`mentor_small.png`).
 - Use values from `config.js` instead of inline magic numbers.
-- Physics: Arcade mode with gravity = 900. Platforms use `staticGroup`. Puzzle elements use static bodies + tweens.
+- Physics: Arcade mode with gravity = 900, zoom: 2, FIT scale. Platforms use `staticGroup`. Puzzle elements use static bodies + tweens.

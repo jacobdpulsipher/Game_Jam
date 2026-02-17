@@ -14,6 +14,7 @@ Living design documents that capture decisions about gameplay, puzzles, levels, 
 | File | Description |
 |------|-------------|
 | `map-design-rules.md` | **Master reference** for level design — physics constants, reachability tables, cord rules, ASCII map conventions, puzzle patterns, difficulty guide, and pre-flight checklist. Read this before creating any level. |
+| `music-composition-guide.md` | Guide for composing new procedural music tracks using the Web Audio API system. Covers the three-section loop structure, instrument setup, melody writing, and mixing. |
 
 ## How to Use
 - **Before coding a new feature**, check if there's a design doc here. If not, create one.
