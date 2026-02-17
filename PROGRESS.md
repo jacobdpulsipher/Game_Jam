@@ -137,7 +137,7 @@ src/
 │   ├── SparkyJoe_clean.png  # Character image for menu screen
 │   └── WorkerSprite.js  # Worker reference sprite
 ├── audio/
-│   └── ProceduralMusic.js    # Web Audio API chiptune synthesizer
+│   └── ProceduralMusic.js    # Web Audio API chiptune synthesizer + SFX (zap, clang, blast, power-up)
 ├── scenes/
 │   ├── BootScene.js     # → PreloadScene
 │   ├── PreloadScene.js  # Generates textures, registers animations
@@ -149,6 +149,8 @@ src/
 │   ├── Generator.js     # Static power source
 │   ├── Terminal.js       # Power outlet — links cord to puzzle elements
 │   ├── ExtensionCord.js # Visual cord (bezier) + range checks
+│   ├── Enemy.js         # Patrolling hazard, killable by cord plug attack
+│   ├── HeavyBlock.js    # Immovable gravity block with skirt + top platform
 │   └── Spikes.js        # Hazard zone, neutralisable by blocks
 ├── puzzles/
 │   ├── SlideDoor.js     # Powered sliding door (configurable direction/speed)
@@ -159,6 +161,7 @@ src/
 │   └── Trigger.js       # Trigger base class
 ├── levels/
 │   ├── LevelRegistry.js # Level list + lookup helpers (getAllLevels for level select)
+│   ├── LevelTutorial.js # "Tutorial" — guided walkthrough with popup hints
 │   ├── Level01.js       # "First Steps" — intro
 │   ├── Level02.js       # "Bridge the Gap" — drawbridge + spikes
 │   ├── Level03.js       # "Dead Weight" — trigger zones + cascading
