@@ -17,8 +17,8 @@ export const GRAVITY = 900;
 export const PLAYER = {
   SPEED: 200,
   JUMP_VELOCITY: -420,   // high enough to jump over a 32px block
-  WIDTH: 48,
-  HEIGHT: 64,
+  WIDTH: 36,
+  HEIGHT: 60,
   COLOR: 0xffcc00,       // placeholder yellow
 };
 
@@ -38,8 +38,8 @@ export const GENERATOR = {
 
 /** Terminal */
 export const TERMINAL = {
-  WIDTH: 16,
-  HEIGHT: 24,
+  WIDTH: 32,
+  HEIGHT: 32,
   COLOR: 0xcc0000,       // red when unpowered
   COLOR_POWERED: 0x00ff00, // green when powered
   INTERACT_RANGE: 40,    // px — how close hero must be to plug/unplug
@@ -47,8 +47,8 @@ export const TERMINAL = {
 
 /** Slide door */
 export const DOOR = {
-  SLIDE_SPEED: 120,
-  WIDTH: 64,
+  SLIDE_SPEED: 400,
+  WIDTH: 32,
   HEIGHT: 128,           // tall door
   COLOR: 0x8855aa,       // purple
   COLOR_OPEN: 0x442266,
@@ -56,7 +56,7 @@ export const DOOR = {
 
 /** Push block (2.5D) */
 export const PUSH_BLOCK = {
-  SIZE: 72,
+  SIZE: 48,
   PUSH_SPEED: 80,
   COLOR_BG: 0x666666,    // when in background
   COLOR_FG: 0x999999,    // when grabbed / foreground
@@ -86,6 +86,22 @@ export const SPIKES = {
   TILE_WIDTH: 16,   // width of one spike triangle
   HEIGHT: 24,       // spike height (visual)
   COLOR: 0xcc2222,  // red
+};
+
+/** Enemy (patrol hazard) */
+export const ENEMY = {
+  WIDTH: 32,        // enemy sprite width (shorter than hero's 48×64)
+  HEIGHT: 32,       // enemy sprite height — short enough to jump over
+  SPEED: 80,        // horizontal patrol speed (px/s)
+  COLOR: 0xcc44cc,  // magenta/purple body
+  EYE_COLOR: 0xffff00, // yellow eyes
+};
+
+/** Heavy block (gravity-following wall, player cannot push) */
+export const HEAVY_BLOCK = {
+  WIDTH: 48,        // default width (matches push block width for stacking)
+  HEIGHT: 72,       // tall enough to block jumps when on a push block (48+72=120 > 98)
+  COLOR: 0x556677,  // steel blue-gray
 };
 
 /** Level layout constants (pixels) */

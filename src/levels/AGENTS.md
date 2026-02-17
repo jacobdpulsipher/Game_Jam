@@ -6,11 +6,12 @@ to build a playable level. This separates level layout (data) from game logic (c
 
 ## Architecture
 ```
-LevelRegistry.js          — ordered list of all levels + helpers
+LevelRegistry.js          — ordered list of all levels + helpers (getAllLevels for level select)
 Level01.js                — "First Steps" (intro)
 Level02.js                — "Bridge the Gap" (drawbridge + spikes)
-Level03.js                — "Power Cascade" (trigger zones + cascading activations)
-Level04.js                — "Tower Descent" (vertical, multi-route, hard)
+Level03.js                — "Dead Weight" (trigger zones + cascading activations)
+Level04.js                — "Power Climb" (vertical, multi-route, hard)
+Level05.js                — "Tower Descent" (tall vertical descent)
 ```
 
 ## How It Works

@@ -102,10 +102,11 @@ export class Generator extends Phaser.Physics.Arcade.Sprite {
     this._label.setColor(this._getLabelColor());
     this._updateGlow();
 
-    // Activate all linked elements
+    // Activate all linked elements (permanently — generator power doesn't toggle)
     for (const id of this.autoActivateIds) {
       const element = elementsById[id];
       if (element && element.activate) {
+        element._permanentlyPowered = true;
         element.activate();
         this._activeElements.set(id, element);
       }

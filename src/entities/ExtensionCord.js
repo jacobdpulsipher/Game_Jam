@@ -37,10 +37,15 @@ export class ExtensionCord {
       // Draw plug at terminal end
       this._drawPlug(t.x, t.y);
     } else {
-      // Cord not connected: draw generator → player (carrying the cord)
-      this._drawLine(gx, gy, player.x, player.y);
-      // Draw dangling plug at player end
-      this._drawPlug(player.x, player.y + 10);
+      // Cord not connected: draw generator → player's hand (carrying the plug)
+      // Offset to the extended hand holding the wrench
+      const handOffsetX = player.facingRight ? 18 : -18;
+      const handOffsetY = -8; // roughly mid-torso / hand height
+      const handX = player.x + handOffsetX;
+      const handY = player.y + handOffsetY;
+      this._drawLine(gx, gy, handX, handY);
+      // Draw dangling plug at player's hand
+      this._drawPlug(handX, handY);
     }
 
     // Draw plug at generator end

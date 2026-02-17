@@ -99,13 +99,17 @@ export class Drawbridge extends Phaser.GameObjects.Sprite {
       this.setAngle(-90);  // starts hanging DOWN from pivot (mirrored)
     }
 
-    // ── Bridge walkable body ──
-    // A thin invisible static body that's only enabled when bridge is horizontal.
+    // ── Bridge collision body ──
+    // An invisible static body enabled only when the bridge is horizontal.
+    // We make it tall enough to block the player from walking through the side.
+    // The top of the body is flush with pivotY (the ground/platform surface).
+    const bodyH = Math.max(h, 64); // tall enough to block sideways entry
     const bodyX = dir === 'right'
       ? opts.pivotX + w / 2
       : opts.pivotX - w / 2;
+    const bodyY = opts.pivotY + bodyH / 2; // positions top of body at pivotY
 
-    this.bridgeBody = scene.add.rectangle(bodyX, opts.pivotY, w, h, 0x000000, 0);
+    this.bridgeBody = scene.add.rectangle(bodyX, bodyY, w, bodyH, 0x000000, 0);
     scene.physics.add.existing(this.bridgeBody, true); // static
     this.bridgeBody.body.enable = false; // start disabled (bridge is down)
 

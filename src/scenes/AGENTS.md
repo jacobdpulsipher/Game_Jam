@@ -12,8 +12,8 @@ BootScene → PreloadScene → MenuScene → GameScene (+ UIScene overlay)
 | Scene          | Key           | Role |
 |----------------|---------------|------|
 | `BootScene`    | `BootScene`   | Minimal setup — transitions immediately to PreloadScene. |
-| `PreloadScene` | `PreloadScene`| Generates all procedural textures (doors, elevators, crates, outlets, plugs, ground, ledges) and the electrician spritesheet. Registers idle/run/grab/jump/fall animations. No external image files. Transitions to MenuScene. |
-| `MenuScene`    | `MenuScene`   | Title screen with dark city skyline backdrop. "Start Game" button + Enter/Space keyboard shortcuts. Plays menu music on first user interaction. Loads the first level via `LevelRegistry.getFirstLevel()`. |
+| `PreloadScene` | `PreloadScene`| Loads `SparkyJoe_clean.png` for the menu character display. Generates all procedural textures (doors, elevators, crates, outlets, plugs, ground, ledges) and the Sparky Joe spritesheet. Registers idle/run/grab/jump/fall animations. Transitions to MenuScene. |
+| `MenuScene`    | `MenuScene`   | Title screen with dark city skyline backdrop. "Start Game" button + **Level Select** buttons for every level (click or press number keys 1–9). Enter/Space keyboard shortcuts. Plays menu music on first user interaction. |
 | `GameScene`    | `GameScene`   | **Data-driven** core gameplay. Receives `{ levelId }` from scene data, loads a level definition from `LevelRegistry`, and instantiates all platforms, entities, and puzzle elements from the data object. Handles collisions, cord/block events, door propping, goal detection, and level transitions (via `data.nextLevel`). |
 | `UIScene`      | `UIScene`     | HUD overlay running on top of GameScene. Displays cord connection status. |
 
@@ -26,6 +26,7 @@ BootScene → PreloadScene → MenuScene → GameScene (+ UIScene overlay)
 - Events: `player-action` (E key), `player-interact` (F key), `door-closing-tick`, `cord-changed`
 - Camera follows player with world bounds set from `data.world.width` × `data.world.height`
 - On goal reached: checks `data.nextLevel` — restarts scene with next level or shows win screen
+- Victory sequence: 3 wrench strikes → `_showVictory()` → floodlights (`_spawnFloodlights`) + building window illumination (`_illuminateWindows`) fade in over 1.5s → victory music + text overlay
 - Error display: try-catch in `create()` renders red error text on canvas
 
 ## Conventions

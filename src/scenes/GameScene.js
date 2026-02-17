@@ -8,6 +8,7 @@ import { Spikes } from '../entities/Spikes.js';
 import { Enemy } from '../entities/Enemy.js';
 import { SlideDoor } from '../puzzles/SlideDoor.js';
 import { PushBlock } from '../puzzles/PushBlock.js';
+import { HeavyBlock } from '../entities/HeavyBlock.js';
 import { Elevator } from '../puzzles/Elevator.js';
 import { Drawbridge } from '../puzzles/Drawbridge.js';
 import { getLevelById, getFirstLevel, getNextLevel } from '../levels/LevelRegistry.js';
@@ -50,6 +51,7 @@ export class GameScene extends Phaser.Scene {
     // Remove any lingering event handlers from a previous level (scene.restart)
     this.events.off('player-action', this._handleAction, this);
     this.events.off('player-interact', this._handleInteract, this);
+    this.events.off('player-attack-strike', this._handleAttackStrike, this);
     this.events.off('door-closing-tick', this._handleDoorClosing, this);
     this.events.off('trigger-zone-activated', this._handleTriggerZone, this);
 
@@ -58,6 +60,9 @@ export class GameScene extends Phaser.Scene {
 
     // ── Dark City Backdrop ──
     this._drawCityBackdrop(data.world.width, data.world.height);
+
+    // ── Midground Buildings (decorative layer between backdrop and gameplay) ──
+    this._drawMidgroundBuildings(data);
 
     // Lookup maps so terminals can reference doors/elevators by id
     this._elementsById = {};
@@ -68,8 +73,9 @@ export class GameScene extends Phaser.Scene {
     // ── Platforms ──
     this.platforms = this.physics.add.staticGroup();
     for (const p of data.platforms) {
-      this.platforms.create(p.x, p.y, 'ground')
-        .setDisplaySize(p.width, p.height).refreshBody();
+      const ts = this.add.tileSprite(p.x, p.y, p.width, p.height, 'ground');
+      this.physics.add.existing(ts, true); // true = static body
+      this.platforms.add(ts);
     }
 
     // ── Generators ──
@@ -90,6 +96,14 @@ export class GameScene extends Phaser.Scene {
     // ── Player ──
     this.player = new Player(this, data.player.x, data.player.y);
     this.player.generator = this._generators[data.player.generatorId];
+
+    // DEBUG: show worker sprite reference in level 1
+    if (data.id === 'level_01') {
+      this.add.image(300, 300, 'worker')
+        .setScale(1)
+        .setDepth(9999)
+        .setScrollFactor(0);
+    }
 
     // ── Doors ──
     this._doors = [];
@@ -126,6 +140,15 @@ export class GameScene extends Phaser.Scene {
       block.elementId = b.id;
       this._elementsById[b.id] = block;
       this._pushBlocks.push(block);
+    }
+
+    // ── Heavy Blocks ──
+    this._heavyBlocks = [];
+    for (const hb of (data.heavyBlocks || [])) {
+      const heavy = new HeavyBlock(this, hb.x, hb.y, hb.width, hb.height);
+      heavy.elementId = hb.id;
+      this._elementsById[hb.id] = heavy;
+      this._heavyBlocks.push(heavy);
     }
 
     // ── Drawbridges ──
@@ -171,11 +194,6 @@ export class GameScene extends Phaser.Scene {
       });
       this._enemies.push(enemy);
     }
-
-    // ── Cord Plug Kill Zone ── (invisible zone that follows the dangling plug)
-    this._plugZone = this.add.zone(0, 0, 12, 12);
-    this.physics.add.existing(this._plugZone, false); // dynamic so it can move
-    this._plugZone.body.setAllowGravity(false);
 
     // Register all puzzle elements with GeneratorSystem for auto-activation
     for (const door of this._doors) {
@@ -271,6 +289,36 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Heavy block collisions
+    for (const heavy of this._heavyBlocks) {
+      // Heavy block collides with platforms (rests on floor)
+      this.physics.add.collider(heavy, this.platforms);
+
+      // Player collides with heavy block body (solid wall)
+      this.physics.add.collider(this.player, heavy);
+
+      // Player can stand on the heavy block's top platform
+      this.physics.add.collider(this.player, heavy.topPlatform);
+
+      // Player blocked by the heavy block's skirt (fills gap to floor)
+      this.physics.add.collider(this.player, heavy.skirt);
+
+      // Heavy block sits on push block top-platforms
+      for (const block of this._pushBlocks) {
+        this.physics.add.collider(heavy, block.topPlatform);
+      }
+
+      // Heavy block collides with doors
+      for (const door of this._doors) {
+        this.physics.add.collider(heavy, door);
+      }
+
+      // Heavy block collides with elevators
+      for (const elev of this._elevators) {
+        this.physics.add.collider(heavy, elev);
+      }
+    }
+
     // Spike overlaps — kill player on contact
     for (const spike of this._spikes) {
       this.physics.add.overlap(this.player, spike, () => {
@@ -288,16 +336,9 @@ export class GameScene extends Phaser.Scene {
         this.physics.add.collider(enemy, door);
       }
 
-      // Player overlaps enemy → die (if enemy is alive)
+      // Player overlaps enemy → die (if enemy is alive and player not attacking)
       this.physics.add.overlap(this.player, enemy, () => {
-        if (enemy.isDangerous) this.player.die();
-      }, null, this);
-
-      // Plug zone overlaps enemy → kill enemy (only when cord is NOT connected)
-      this.physics.add.overlap(this._plugZone, enemy, () => {
-        if (enemy.isDangerous && !this.player.cordConnectedTerminal && !this.player._isDead) {
-          enemy.kill();
-        }
+        if (enemy.isDangerous && !this.player._isAttacking) this.player.die();
       }, null, this);
     }
 
@@ -327,9 +368,20 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.overlap(this.player, this.goalZone, this._onReachGoal, null, this);
     }
 
+    // ── Tutorial Popup Zones ──
+    this._tutorialPopups = [];
+    this._activeTutorial = null;  // currently displayed popup
+    for (const tp of (data.tutorialPopups || [])) {
+      const zone = this.add.zone(tp.x, tp.y, tp.width, tp.height);
+      this.physics.add.existing(zone, true);
+      zone._tutData = tp;
+      this._tutorialPopups.push(zone);
+    }
+
     // ── EVENT HANDLERS ──
     this.events.on('player-action', this._handleAction, this);
     this.events.on('player-interact', this._handleInteract, this);
+    this.events.on('player-attack-strike', this._handleAttackStrike, this);
     this.events.on('door-closing-tick', this._handleDoorClosing, this);
     this.events.on('trigger-zone-activated', this._handleTriggerZone, this);
 
@@ -349,7 +401,9 @@ export class GameScene extends Phaser.Scene {
 
     // ── Music ──
     music.init();
-    music.playLevel();
+    // Extract level number from level ID (e.g., 'level_01' -> 1, 'level_02' -> 2)
+    const levelNum = parseInt(data.id.replace(/\D/g, '')) || 1;
+    music.playLevel(levelNum);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -357,26 +411,32 @@ export class GameScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════════
 
   update(time, delta) {
+    // Check tutorial popup zones — show/hide based on proximity (non-blocking)
+    if (this._tutorialPopups && this.player) {
+      let insideZone = null;
+      for (const zone of this._tutorialPopups) {
+        const dx = Math.abs(this.player.x - zone.x);
+        const dy = Math.abs(this.player.y - zone.y);
+        if (dx < zone.width / 2 && dy < zone.height / 2) {
+          insideZone = zone._tutData;
+          break;
+        }
+      }
+      // Show popup if entering a new zone, hide if leaving
+      if (insideZone && (!this._activeTutorial || this._activeTutorial._tutId !== insideZone.id)) {
+        this._dismissTutorial();
+        this._showTutorial(insideZone);
+      } else if (!insideZone && this._activeTutorial) {
+        this._dismissTutorial();
+      }
+    }
+
     if (this.player) this.player.update();
     if (this.extensionCord) this.extensionCord.update(this.player);
 
     // Update enemies
     for (const enemy of this._enemies) {
       if (enemy.active) enemy.update();
-    }
-
-    // Update plug kill-zone position:
-    // When cord is NOT connected, the plug dangles near the player.
-    // When cord IS connected, move the zone off-screen (disabled).
-    if (this._plugZone) {
-      if (this.player && !this.player.cordConnectedTerminal && !this.player._isDead) {
-        // Plug follows player — slightly in front, at waist height
-        const offsetX = this.player.facingRight ? 20 : -20;
-        this._plugZone.setPosition(this.player.x + offsetX, this.player.y + 10);
-      } else {
-        // Move off-screen when cord is in use or player is dead
-        this._plugZone.setPosition(-999, -999);
-      }
     }
 
     // Elevator rider logic — carry the player along with moving elevators
@@ -399,6 +459,11 @@ export class GameScene extends Phaser.Scene {
     // Sync push block top-platforms with their dynamic bodies
     for (const block of this._pushBlocks) {
       block.syncPosition();
+    }
+
+    // Sync heavy block top-platforms
+    for (const heavy of this._heavyBlocks) {
+      heavy.syncPosition();
     }
 
     // Check if any block has landed on spikes → neutralise them
@@ -501,12 +566,215 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Draw decorative buildings behind platforms to make them look like rooftops. */
+  _drawMidgroundBuildings(data) {
+    if (!data.midgroundBuildings?.length) return;
+
+    const g = this.add.graphics();
+    g.setDepth(-5); // between backdrop (-10) and gameplay elements (0+)
+    // scrollFactor 1.0 (default) — moves with the game world, aligned with platforms
+
+    for (const b of data.midgroundBuildings) {
+      const color = b.color || 0x1c1c3a;
+      const bx = b.x;
+      const by = b.y;
+      const bw = b.width;
+      const bh = b.height;
+
+      // ── Building body ──
+      g.fillStyle(color, 1);
+      g.fillRect(bx, by, bw, bh);
+
+      // ── Cornice / ledge at top (slightly wider overhang) ──
+      const overhang = 3;
+      const r = (color >> 16) & 0xff;
+      const gr2 = (color >> 8) & 0xff;
+      const bl = color & 0xff;
+      const corniceColor = Phaser.Display.Color.GetColor(
+        Math.min(255, r + 18), Math.min(255, gr2 + 18), Math.min(255, bl + 25)
+      );
+      g.fillStyle(corniceColor, 0.9);
+      g.fillRect(bx - overhang, by, bw + overhang * 2, 3);
+
+      // ── Side edges (darker vertical bands) ──
+      g.fillStyle(0x000000, 0.18);
+      g.fillRect(bx, by + 3, 2, bh - 3);
+      g.fillRect(bx + bw - 2, by + 3, 2, bh - 3);
+
+      // ── Vertical column separators for wide buildings ──
+      if (bw > 120) {
+        const colSpacing = bw > 250 ? 80 : 60;
+        for (let cx = bx + colSpacing; cx < bx + bw - 20; cx += colSpacing) {
+          g.fillStyle(0x000000, 0.1);
+          g.fillRect(cx, by + 4, 2, bh - 8);
+        }
+      }
+
+      // ── Floor separator lines ──
+      const floorH = 38;
+      for (let fy = by + floorH; fy < by + bh - 10; fy += floorH) {
+        g.fillStyle(0x000000, 0.08);
+        g.fillRect(bx + 4, fy, bw - 8, 1);
+      }
+
+      // ── Windows ──
+      const winW = 5;
+      const winH = 7;
+      const spacingX = 14;
+      const spacingY = 16;
+      const marginX = 10;
+      const marginY = 12;
+
+      let floorIdx = 0;
+      for (let wy = by + marginY; wy + winH < by + bh - 8; wy += spacingY) {
+        // Skip occasional floor (mechanical / dark band)
+        if (floorIdx % 7 === 4) { floorIdx++; continue; }
+        for (let wx = bx + marginX; wx + winW < bx + bw - marginX; wx += spacingX) {
+          // Deterministic lit/unlit using position hash
+          const hash = ((wx * 3 + wy * 7 + bx) % 13);
+          const isLit = hash < 2;
+          if (isLit) {
+            // Warm lit window (dim yellow/orange)
+            const warmth = (hash === 0) ? 0x443311 : 0x3a3822;
+            g.fillStyle(warmth, 0.65);
+          } else {
+            g.fillStyle(0x0f0f22, 0.9);
+          }
+          g.fillRect(wx, wy, winW, winH);
+        }
+        floorIdx++;
+      }
+
+      // ── Rooftop details ──
+      if (b.roofDetails) {
+        for (const d of b.roofDetails) {
+          const dx = bx + (d.offsetX || 0);
+          if (d.type === 'ac') {
+            // AC / HVAC unit box
+            g.fillStyle(0x2a2a48, 1);
+            g.fillRect(dx, by - 10, 22, 10);
+            g.fillStyle(0x333355, 0.8);
+            g.fillRect(dx + 3, by - 8, 16, 2);
+            g.fillRect(dx + 3, by - 4, 16, 2);
+          } else if (d.type === 'tank') {
+            // Water tank on legs
+            g.fillStyle(0x252545, 1);
+            g.fillRect(dx + 2, by - 8, 3, 8);
+            g.fillRect(dx + 17, by - 8, 3, 8);
+            g.fillRect(dx, by - 22, 22, 14);
+            g.fillStyle(0x333358, 0.6);
+            g.fillRect(dx + 2, by - 20, 18, 2);
+          } else if (d.type === 'antenna') {
+            // Thin antenna mast with blinking red light
+            g.lineStyle(1.5, 0x3a3a58, 0.8);
+            g.beginPath();
+            g.moveTo(dx + 2, by);
+            g.lineTo(dx + 2, by - 30);
+            g.strokePath();
+            g.fillStyle(0xff3300, 0.6);
+            g.fillCircle(dx + 2, by - 30, 2);
+          } else if (d.type === 'dish') {
+            // Satellite dish
+            g.lineStyle(1, 0x3a3a58, 0.7);
+            g.fillStyle(0x2a2a48, 0.8);
+            g.fillRect(dx + 5, by - 4, 2, 4);
+            g.beginPath();
+            g.arc(dx + 6, by - 10, 7, -0.4, Math.PI + 0.4, false);
+            g.strokePath();
+          }
+        }
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  TUTORIAL POPUP SYSTEM
+  // ═══════════════════════════════════════════════════════════════
+
+  /** Show a non-blocking tutorial hint in the top-left corner. */
+  _showTutorial(data) {
+    this._dismissTutorial();
+
+    // Top-left position, compact box
+    const margin = 12;
+    const lineH = 20;
+    const padding = 14;
+    const titleH = 28;
+    const boxW = 340;
+    const boxH = titleH + padding + data.lines.length * lineH + padding;
+    const boxX = margin;
+    const boxY = margin;
+
+    // Panel background
+    const panel = this.add.graphics().setScrollFactor(0).setDepth(501);
+    // Outer border glow
+    panel.fillStyle(0x00aaff, 0.2);
+    panel.fillRoundedRect(boxX - 2, boxY - 2, boxW + 4, boxH + 4, 8);
+    // Panel body
+    panel.fillStyle(0x0a0a1e, 0.88);
+    panel.fillRoundedRect(boxX, boxY, boxW, boxH, 6);
+    // Top accent bar
+    panel.fillStyle(0x00aaff, 0.7);
+    panel.fillRect(boxX + 12, boxY + 4, boxW - 24, 2);
+
+    // Title text
+    const title = this.add.text(boxX + padding, boxY + 12, data.title, {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#44ddff',
+      fontStyle: 'bold',
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(502);
+
+    // Body lines
+    const bodyTexts = [];
+    const bodyStartY = boxY + titleH + padding;
+    for (let i = 0; i < data.lines.length; i++) {
+      const t = this.add.text(boxX + padding, bodyStartY + i * lineH, data.lines[i], {
+        fontSize: '13px',
+        fontFamily: 'monospace',
+        color: '#ccccdd',
+      }).setOrigin(0, 0).setScrollFactor(0).setDepth(502);
+      bodyTexts.push(t);
+    }
+
+    // Store references for cleanup
+    this._activeTutorial = {
+      _tutId: data.id, panel, title, bodyTexts,
+    };
+  }
+
+  /** Dismiss the active tutorial hint. */
+  _dismissTutorial() {
+    if (!this._activeTutorial) return;
+    const { panel, title, bodyTexts } = this._activeTutorial;
+
+    if (panel) panel.destroy();
+    if (title) title.destroy();
+    if (bodyTexts) bodyTexts.forEach(t => t.destroy());
+
+    this._activeTutorial = null;
+  }
+
   _handleAction(player) {
+    // Try to activate nearby inactive secondary generator (press E)
+    // This works regardless of cord state — generators don't need the cord
+    for (const [id, gen] of Object.entries(this._generators)) {
+      if (!gen.isPrimary && !gen.isActivated) {
+        const dist = Phaser.Math.Distance.Between(gen.x, gen.y, player.x, player.y);
+        if (dist <= 50) {
+          this._generatorSystem.activateGenerator(id);
+          this._playSpark(gen.x, gen.y);
+          return;
+        }
+      }
+    }
+
     // If already connected, only allow disconnecting at the same terminal
     if (player.cordConnectedTerminal) {
       const ct = player.cordConnectedTerminal;
       if (ct.isPlayerInRange(player)) {
         player.disconnectCord();
+        music.playElectricZap();
         this.events.emit('cord-changed', null);
       }
       // Cord is in use — must unplug first before connecting elsewhere
@@ -524,8 +792,245 @@ export class GameScene extends Phaser.Scene {
     }
     if (best) {
       player.connectTo(best);
+      music.playElectricZap();
       this.events.emit('cord-changed', best);
+      return;
     }
+
+    // No terminal nearby and cord not connected — attack with the plug!
+    if (!player.cordConnectedTerminal) {
+      player.attack();
+    }
+  }
+
+  /** Handle the attack strike moment — check for nearby enemies and kill them. */
+  _handleAttackStrike(player) {
+    const ATTACK_RANGE = 100; // pixels in front of the player
+    const ATTACK_HEIGHT = 50; // vertical tolerance
+
+    // Hand position (matches ExtensionCord plug offset)
+    const handOffsetX = player.facingRight ? 18 : -18;
+    const handX = player.x + handOffsetX;
+    const handY = player.y - 8;
+
+    for (const enemy of this._enemies) {
+      if (!enemy.active || !enemy.isDangerous) continue;
+
+      // Check if enemy is in front of the player and within range
+      const dx = enemy.x - player.x;
+      const dy = Math.abs(enemy.y - player.y);
+      const inFront = player.facingRight ? (dx > 0 && dx < ATTACK_RANGE) : (dx < 0 && dx > -ATTACK_RANGE);
+
+      if (inFront && dy < ATTACK_HEIGHT) {
+        // Electric blast sound
+        music.playElectricBlast();
+        // Electric spark arc from hand to enemy
+        this._playSparkArc(handX, handY, enemy.x, enemy.y);
+        // Spark burst at the enemy position
+        this._playSpark(enemy.x, enemy.y);
+        enemy.kill();
+      }
+    }
+  }
+
+  /**
+   * Play an electric spark arc from the player's hand toward a target.
+   * Multiple sparks shoot in a directed stream with slight scatter.
+   */
+  _playSparkArc(fromX, fromY, toX, toY) {
+    const g = this.add.graphics();
+    g.setDepth(55);
+
+    const sparkColors = [0x00ccff, 0x44eeff, 0xffffff, 0xaaddff, 0x88ffff, 0xffff00, 0xffaa00];
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const baseAngle = Math.atan2(dy, dx);
+
+    const sparks = [];
+    const count = 18 + Math.floor(Math.random() * 8);
+
+    for (let i = 0; i < count; i++) {
+      // Spread angle slightly around the direction to target
+      const angle = baseAngle + (Math.random() - 0.5) * 0.7;
+      const speed = dist * 3 + Math.random() * 80;
+      // Stagger start positions slightly along the hand
+      const startOffX = (Math.random() - 0.5) * 8;
+      const startOffY = (Math.random() - 0.5) * 8;
+      sparks.push({
+        x: fromX + startOffX,
+        y: fromY + startOffY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        size: 1.5 + Math.random() * 3.5,
+        color: sparkColors[Math.floor(Math.random() * sparkColors.length)],
+      });
+    }
+
+    // Also draw a few jagged lightning bolt segments
+    const boltSegments = [];
+    const numBolts = 3 + Math.floor(Math.random() * 2);
+    for (let b = 0; b < numBolts; b++) {
+      const segs = [];
+      let px = fromX, py = fromY;
+      const steps = 4 + Math.floor(Math.random() * 3);
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const targetX = fromX + dx * t + (Math.random() - 0.5) * 16;
+        const targetY = fromY + dy * t + (Math.random() - 0.5) * 12;
+        segs.push({ x: targetX, y: targetY });
+      }
+      // Ensure last point hits the target
+      segs[segs.length - 1] = { x: toX, y: toY };
+      boltSegments.push(segs);
+    }
+
+    const duration = 250;
+    const startTime = this.time.now;
+
+    this.time.addEvent({
+      delay: 16,
+      repeat: Math.ceil(duration / 16),
+      callback: () => {
+        g.clear();
+        const elapsed = this.time.now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+
+        // Draw lightning bolts (fade out fast)
+        if (t < 0.5) {
+          const boltAlpha = (1 - t / 0.5) * 0.9;
+          for (const segs of boltSegments) {
+            // Outer glow
+            g.lineStyle(4, 0x44aaff, boltAlpha * 0.3);
+            g.beginPath();
+            g.moveTo(segs[0].x, segs[0].y);
+            for (let s = 1; s < segs.length; s++) {
+              g.lineTo(segs[s].x, segs[s].y);
+            }
+            g.strokePath();
+            g.lineStyle(2, 0x88eeff, boltAlpha);
+            g.beginPath();
+            g.moveTo(segs[0].x, segs[0].y);
+            for (let s = 1; s < segs.length; s++) {
+              g.lineTo(segs[s].x, segs[s].y);
+            }
+            g.strokePath();
+            // Brighter core
+            g.lineStyle(0.5, 0xffffff, boltAlpha);
+            g.beginPath();
+            g.moveTo(segs[0].x, segs[0].y);
+            for (let s = 1; s < segs.length; s++) {
+              g.lineTo(segs[s].x, segs[s].y);
+            }
+            g.strokePath();
+          }
+        }
+
+        // Draw spark particles
+        for (const s of sparks) {
+          s.x += s.vx * 0.016;
+          s.y += s.vy * 0.016;
+          s.vy += 30 * 0.016; // light gravity
+          s.vx *= 0.96; // drag
+          s.vy *= 0.96;
+          s.life = 1 - t;
+
+          if (s.life > 0) {
+            // Outer glow
+            g.fillStyle(s.color, s.life * 0.25);
+            g.fillCircle(s.x, s.y, s.size * s.life * 3);
+            // Core
+            g.fillStyle(s.color, s.life * 0.95);
+            g.fillCircle(s.x, s.y, s.size * s.life);
+            // Hot center
+            g.fillStyle(0xffffff, s.life * 0.5);
+            g.fillCircle(s.x, s.y, s.size * s.life * 0.5);
+          }
+        }
+
+        // Hand flash at origin — bigger, brighter
+        if (t < 0.25) {
+          const flashAlpha = (1 - t / 0.25) * 0.7;
+          g.fillStyle(0xffffff, flashAlpha * 0.4);
+          g.fillCircle(fromX, fromY, 18 * (1 - t * 2.5));
+          g.fillStyle(0x88eeff, flashAlpha);
+          g.fillCircle(fromX, fromY, 10 * (1 - t * 2.5));
+          g.fillStyle(0xffffff, flashAlpha * 0.8);
+          g.fillCircle(fromX, fromY, 4 * (1 - t * 2.5));
+        }
+
+        if (t >= 1) {
+          g.destroy();
+        }
+      },
+    });
+  }
+
+  /** Play a spark particle burst at the given position. */
+  _playSpark(x, y) {
+    const g = this.add.graphics();
+    g.setDepth(50);
+
+    const sparkColors = [0xffff00, 0xffaa00, 0xffffff, 0xff8800, 0x00ccff];
+    const sparks = [];
+
+    // Create spark particles
+    for (let i = 0; i < 12; i++) {
+      const angle = (Math.PI * 2 * i) / 12 + (Math.random() - 0.5) * 0.5;
+      const speed = 40 + Math.random() * 80;
+      sparks.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        size: 1 + Math.random() * 2.5,
+        color: sparkColors[Math.floor(Math.random() * sparkColors.length)],
+      });
+    }
+
+    // Animate over ~400ms
+    const duration = 400;
+    const startTime = this.time.now;
+
+    const sparkTimer = this.time.addEvent({
+      delay: 16,
+      repeat: Math.ceil(duration / 16),
+      callback: () => {
+        g.clear();
+        const elapsed = this.time.now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+
+        for (const s of sparks) {
+          s.x += s.vx * 0.016;
+          s.y += s.vy * 0.016;
+          s.vy += 80 * 0.016; // gravity on sparks
+          s.life = 1 - t;
+
+          if (s.life > 0) {
+            g.fillStyle(s.color, s.life);
+            g.fillCircle(s.x, s.y, s.size * s.life);
+            // Glow around bright sparks
+            g.fillStyle(0xffffff, s.life * 0.3);
+            g.fillCircle(s.x, s.y, s.size * s.life * 2);
+          }
+        }
+
+        // Central flash (fades quickly)
+        if (t < 0.3) {
+          const flashAlpha = (1 - t / 0.3) * 0.6;
+          g.fillStyle(0xffffff, flashAlpha);
+          g.fillCircle(x, y, 15 * (1 - t));
+          g.fillStyle(0xffff00, flashAlpha * 0.5);
+          g.fillCircle(x, y, 20 * (1 - t));
+        }
+
+        if (t >= 1) {
+          g.destroy();
+        }
+      },
+    });
   }
 
   _handleInteract(player) {
@@ -545,7 +1050,12 @@ export class GameScene extends Phaser.Scene {
   _handleDoorClosing(door) {
     for (const block of this._pushBlocks) {
       if (block.isUnderDoor(door)) {
-        const propY = block.y - PUSH_BLOCK.SIZE / 2 - (door._h || DOOR.HEIGHT) / 2;
+        // Door bottom must be high enough for player to pass
+        // Player collision body (54px) - Block height (48px) = 6px minimum clearance
+        const CLEARANCE = 6;
+        const blockTop = block.y - PUSH_BLOCK.SIZE / 2;
+        const doorBottom = blockTop - CLEARANCE;
+        const propY = doorBottom - (door._h || DOOR.HEIGHT) / 2;
         if (door.y >= propY) {
           door.propAt(propY);
         }
@@ -562,26 +1072,309 @@ export class GameScene extends Phaser.Scene {
   _onReachGoal() {
     if (this._levelComplete) return;
     this._levelComplete = true;
-    this.physics.pause();
+
+    // Freeze player movement but keep physics for animation
+    this.player.setVelocity(0, 0);
+    this.player.body.setAllowGravity(false);
+    this.player._isRepairing = true; // block normal update movement
+
+    // Face the goal zone (generator is usually to the right)
+    if (this.goalZone) {
+      const faceRight = this.goalZone.x >= this.player.x;
+      this.player.setFlipX(!faceRight);
+      this.player.facingRight = faceRight;
+    }
+
+    // Stop level music
     music.stop();
-    music.playVictory();
 
-    const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
-    const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+    // --- Repair cutscene: 3 wrench strikes with clangs & smoke ---
+    const STRIKES = 3;
+    const STRIKE_DELAY = 450; // ms between strikes
+    let strikeCount = 0;
 
-    const next = this._levelData.nextLevel;
-    const msg = next
-      ? 'Level Complete!\nPress ENTER for next level'
-      : 'Generator Fixed!\nYou Win!';
+    const doStrike = () => {
+      strikeCount++;
 
-    this.add.text(cx, cy, msg, {
-      fontSize: '32px', fontFamily: 'monospace', color: '#0f0', align: 'center',
-    }).setOrigin(0.5).setDepth(200);
+      // Play attack animation
+      this.player._isAttacking = true;
+      this.player.play('attack', true);
+      this.time.delayedCall(80, () => { this.player._isAttacking = false; });
 
-    if (next) {
-      this.input.keyboard.once('keydown-ENTER', () => {
-        this.scene.stop(SCENES.UI);
-        this.scene.restart({ levelId: next });
+      // Clang sound
+      music.playMetalClang();
+
+      // Smoke puff particles near the generator
+      this._spawnSmokePuff(this.goalZone.x, this.goalZone.y);
+
+      if (strikeCount < STRIKES) {
+        this.time.delayedCall(STRIKE_DELAY, doStrike);
+      } else {
+        // Final strike done — short pause then victory
+        this.time.delayedCall(400, () => {
+          this._showVictory();
+        });
+      }
+    };
+
+    // Small pause before first strike
+    this.time.delayedCall(300, doStrike);
+  }
+
+  /** Spawn a burst of smoke puff circles that float upward and fade. */
+  _spawnSmokePuff(x, y) {
+    const count = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < count; i++) {
+      const px = x + (Math.random() - 0.5) * 24;
+      const py = y - 5 + (Math.random() - 0.5) * 10;
+      const size = 3 + Math.random() * 5;
+      const gray = 0.4 + Math.random() * 0.3;
+      const color = Phaser.Display.Color.GetColor(
+        Math.floor(gray * 255), Math.floor(gray * 255), Math.floor(gray * 255)
+      );
+
+      const puff = this.add.circle(px, py, size, color, 0.7).setDepth(150);
+
+      // Float up and fade out
+      this.tweens.add({
+        targets: puff,
+        y: py - 20 - Math.random() * 20,
+        x: px + (Math.random() - 0.5) * 16,
+        alpha: 0,
+        scaleX: 0.3,
+        scaleY: 0.3,
+        duration: 500 + Math.random() * 400,
+        ease: 'Quad.easeOut',
+        onComplete: () => puff.destroy(),
+      });
+    }
+  }
+
+  /** Show victory message and play victory music. */
+  _showVictory() {
+    this.physics.pause();
+
+    // --- Floodlights power-up sequence ---
+    const POWER_UP_DURATION = 1500; // ms
+    music.playPowerUp(POWER_UP_DURATION / 1000);
+    this._spawnFloodlights(POWER_UP_DURATION);
+    this._illuminateWindows(POWER_UP_DURATION);
+
+    // After floodlights finish powering up, play victory music & show message
+    this.time.delayedCall(POWER_UP_DURATION + 200, () => {
+      music.playVictory();
+
+      const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
+      const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+
+      const next = this._levelData.nextLevel;
+      const msg = next
+        ? 'Level Complete!\nPress ENTER for next level'
+        : 'Generator Fixed!\nYou Win!';
+
+      this.add.text(cx, cy, msg, {
+        fontSize: '32px', fontFamily: 'monospace', color: '#0f0', align: 'center',
+      }).setOrigin(0.5).setDepth(200);
+
+      if (next) {
+        this.input.keyboard.once('keydown-ENTER', () => {
+          this.scene.stop(SCENES.UI);
+          this.scene.restart({ levelId: next });
+        });
+      }
+    });
+  }
+
+  /**
+   * Spawn floodlight beams that shine upward from the bottom of the map.
+   * Each beam is a triangle that fades in during the power-up duration.
+   * @param {number} duration - Fade-in duration in ms
+   */
+  _spawnFloodlights(duration) {
+    const worldW = this._levelData.world.width;
+    const worldH = this._levelData.world.height;
+    const bottomY = worldH;       // bottom of the world
+    const beamHeight = worldH;    // beams extend the full map height
+
+    // Place 4-6 floodlights evenly across the map width
+    const count = Math.max(4, Math.min(6, Math.floor(worldW / 250)));
+    const spacing = worldW / (count + 1);
+
+    // Warm amber / white light colors
+    const colors = [0xffee88, 0xffffff, 0xffd866, 0xeeeeff, 0xffcc44, 0xfff0cc];
+
+    for (let i = 0; i < count; i++) {
+      const bx = spacing * (i + 1);
+      const beamWidth = 30 + Math.random() * 20;  // width at bottom
+      const spreadTop = 60 + Math.random() * 40;   // width at top (wider = more spread)
+
+      const g = this.add.graphics().setDepth(100);
+      g.setAlpha(0); // start invisible
+
+      const color = colors[i % colors.length];
+
+      // Draw the beam as a filled triangle (wide at bottom, narrowing upward,
+      // but actually wider at top to simulate light spread)
+      g.fillStyle(color, 0.12);
+      g.beginPath();
+      g.moveTo(bx - beamWidth / 2, bottomY);        // bottom-left
+      g.lineTo(bx + beamWidth / 2, bottomY);        // bottom-right
+      g.lineTo(bx + spreadTop / 2, bottomY - beamHeight); // top-right (spread)
+      g.lineTo(bx - spreadTop / 2, bottomY - beamHeight); // top-left (spread)
+      g.closePath();
+      g.fillPath();
+
+      // Inner brighter core beam
+      g.fillStyle(color, 0.08);
+      g.beginPath();
+      g.moveTo(bx - beamWidth * 0.3, bottomY);
+      g.lineTo(bx + beamWidth * 0.3, bottomY);
+      g.lineTo(bx + spreadTop * 0.25, bottomY - beamHeight);
+      g.lineTo(bx - spreadTop * 0.25, bottomY - beamHeight);
+      g.closePath();
+      g.fillPath();
+
+      // Light source glow at the bottom
+      g.fillStyle(color, 0.25);
+      g.fillCircle(bx, bottomY - 4, 6);
+      g.fillStyle(0xffffff, 0.15);
+      g.fillCircle(bx, bottomY - 4, 3);
+
+      // Fade in with a slight stagger per light
+      const stagger = (i / count) * duration * 0.3;
+      this.tweens.add({
+        targets: g,
+        alpha: 1,
+        duration: duration - stagger,
+        delay: stagger,
+        ease: 'Quad.easeIn',
+      });
+
+      // Subtle sway/flicker once fully on
+      this.time.delayedCall(duration + stagger, () => {
+        this.tweens.add({
+          targets: g,
+          alpha: { from: 0.85, to: 1 },
+          duration: 300 + Math.random() * 200,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      });
+    }
+  }
+
+  /**
+   * Illuminate windows on background buildings when level is completed.
+   * Overlays warm-lit windows on top of the dark ones drawn during backdrop
+   * and midground building creation, simulating power being restored.
+   * @param {number} duration - Fade-in duration in ms (synced with floodlights)
+   */
+  _illuminateWindows(duration) {
+    const worldW = this._levelData.world.width;
+    const worldH = this._levelData.world.height;
+
+    // ── City backdrop windows (depth -9, above backdrop at -10) ──
+    const bgGlow = this.add.graphics();
+    bgGlow.setDepth(-9);
+    bgGlow.setScrollFactor(0.3, 0.3); // match backdrop parallax
+    bgGlow.setAlpha(0);
+
+    // Far buildings — light up most windows
+    const farCount = Math.floor(worldW / 60) + 4;
+    for (let i = 0; i < farCount; i++) {
+      const bx = i * 60 - 30 + ((i * 37) % 20);
+      const bh = 80 + ((i * 73) % 120);
+      const bw = 30 + ((i * 41) % 30);
+      for (let wy = worldH - bh - 90; wy < worldH - 110; wy += 12) {
+        for (let wx = bx + 4; wx < bx + bw - 4; wx += 8) {
+          // Keep ~20% dark for realism
+          if (((wx * 5 + wy * 3) % 10) < 2) continue;
+          const warmth = ((wx + wy) % 3 === 0) ? 0xffdd44 : 0xffcc33;
+          bgGlow.fillStyle(warmth, 0.45);
+          bgGlow.fillRect(wx, wy, 3, 4);
+        }
+      }
+    }
+
+    // Near buildings — light up previously-dark windows
+    const nearCount = Math.floor(worldW / 80) + 3;
+    for (let i = 0; i < nearCount; i++) {
+      const bx = i * 80 + ((i * 53) % 30) - 20;
+      const bh = 100 + ((i * 97) % 160);
+      const bw = 40 + ((i * 61) % 40);
+      for (let wy = worldH - bh - 50; wy < worldH - 70; wy += 14) {
+        for (let wx = bx + 5; wx < bx + bw - 5; wx += 10) {
+          const wasLit = ((wx * 3 + wy * 7) % 11) < 2;
+          if (wasLit) continue; // already lit
+          // Keep ~15% dark
+          if (((wx * 7 + wy * 2) % 13) < 2) continue;
+          const warmth = ((wx + wy) % 3 === 0) ? 0xffcc33 : 0xeebb22;
+          bgGlow.fillStyle(warmth, 0.5);
+          bgGlow.fillRect(wx, wy, 4, 5);
+        }
+      }
+    }
+
+    // ── Midground building windows (depth -4, above midground at -5) ──
+    const midGlow = this.add.graphics();
+    midGlow.setDepth(-4);
+    midGlow.setAlpha(0);
+
+    const midBuildings = this._levelData.midgroundBuildings || [];
+    for (const b of midBuildings) {
+      const bx = b.x;
+      const by = b.y;
+      const bw = b.width;
+      const bh = b.height;
+      const winW = 5, winH = 7;
+      const spacingX = 14, spacingY = 16;
+      const marginX = 10, marginY = 12;
+
+      let floorIdx = 0;
+      for (let wy = by + marginY; wy + winH < by + bh - 8; wy += spacingY) {
+        if (floorIdx % 7 === 4) { floorIdx++; continue; }
+        for (let wx = bx + marginX; wx + winW < bx + bw - marginX; wx += spacingX) {
+          const hash = ((wx * 3 + wy * 7 + bx) % 13);
+          const wasLit = hash < 2;
+          if (wasLit) continue; // already lit
+          // Keep ~10% dark even after power-up
+          if (hash === 3) continue;
+          // Warm lit window
+          const warmth = (hash % 4 === 0) ? 0xffdd44 : 0xeebb33;
+          midGlow.fillStyle(warmth, 0.6);
+          midGlow.fillRect(wx, wy, winW, winH);
+          // Small ambient glow around window (soft orange halo)
+          if (hash % 5 === 0) {
+            midGlow.fillStyle(0xffaa22, 0.08);
+            midGlow.fillRect(wx - 2, wy - 1, winW + 4, winH + 2);
+          }
+        }
+        floorIdx++;
+      }
+    }
+
+    // Fade in both overlays slightly after floodlights begin
+    const delayOffset = duration * 0.2;
+    for (const gfx of [bgGlow, midGlow]) {
+      this.tweens.add({
+        targets: gfx,
+        alpha: 1,
+        duration: duration - delayOffset,
+        delay: delayOffset,
+        ease: 'Quad.easeIn',
+      });
+
+      // Gentle pulse once fully on
+      this.time.delayedCall(duration + delayOffset, () => {
+        this.tweens.add({
+          targets: gfx,
+          alpha: { from: 0.9, to: 1 },
+          duration: 800 + Math.random() * 400,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
       });
     }
   }

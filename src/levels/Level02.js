@@ -1,4 +1,4 @@
-import { GAME_HEIGHT, PUSH_BLOCK, ELEVATOR, SPIKES } from '../config.js';
+import { GAME_HEIGHT, PUSH_BLOCK, ELEVATOR, SPIKES, ENEMY } from '../config.js';
 
 /**
  * Level 02 — "Bridge the Gap"
@@ -45,28 +45,28 @@ const G1_X       = 80;
 const PLAYER_X   = 150;
 const T1_X       = 260;
 const PIT_LEFT   = 300;      // left edge of the pit
-const PIT_RIGHT  = 500;      // right edge of the pit (200px wide)
+const PIT_RIGHT  = 550;      // right edge of the pit (200px wide)
 const PIT_CENTER = (PIT_LEFT + PIT_RIGHT) / 2; // 400
 const DB_PIVOT_X = PIT_LEFT; // drawbridge pivots at the left edge
 
 // Steps from pit-right up to mid platform (well right of the pit)
-const STEP1_X = 830;  const STEP1_Y = FLOOR_Y - 55;
-const STEP2_X = 920;  const STEP2_Y = FLOOR_Y - 120;
+const STEP1_X = 860;  const STEP1_Y = FLOOR_Y - 55;
+const STEP2_X = 980;  const STEP2_Y = FLOOR_Y - 120;
 const STEP3_X = 1100;  const STEP3_Y = FLOOR_Y - 185;
 
 // Mid platform (left edge well past the pit so block falls onto floor, not into pit)
 const MID_LEFT  = 570;
-const MID_RIGHT = 920;
+const MID_RIGHT = 890;
 const MID_W     = MID_RIGHT - MID_LEFT;
 
 const T2_X      = 660;     // elevator terminal on mid platform
 const BLOCK_X   = 780;     // push block on mid platform
 
 // Elevator
-const ELEV_X = 570;        // left side of mid platform, travels to top
+const ELEV_X = 450;        // left side of mid platform, travels to top
 
 // Top platform — starts RIGHT of the elevator so player can ride up freely
-const TOP_LEFT  = 630;
+const TOP_LEFT  = 550;
 const TOP_RIGHT = WORLD_W - 16;
 const TOP_W     = TOP_RIGHT - TOP_LEFT;
 
@@ -167,6 +167,19 @@ export const LEVEL_02 = {
     },
   ],
 
+  // ── Enemies ────────────────────────────────────────────
+  enemies: [
+    {
+      id: 'enemy1',
+      x: 700,                                     // starts on the right floor section
+      y: FLOOR_Y - ENEMY.HEIGHT / 2,              // standing on the floor
+      rangeLeft: PIT_RIGHT + 20,                   // right edge of pit + margin
+      rangeRight: STEP1_X - 40,                    // before the first step
+      direction: 'left',
+      label: '👾',
+    },
+  ],
+
   // ── Generator Links ────────────────────────────────────
   // Define which elements are auto-activated by secondary generators
   generatorLinks: [
@@ -188,6 +201,78 @@ export const LEVEL_02 = {
       triggersGenerator: 'g2',   // activates the secondary generator G2
       onceOnly: false,           // can be triggered multiple times
       debugVisible: true,        // shows as cyan box in debug mode
+    },
+  ],
+
+  // ── Midground Buildings (decorative, behind platforms) ─
+  // Drawn at depth -5, scrollFactor 1.0 — makes platforms look like rooftops
+  midgroundBuildings: [
+    // Short building — far left, behind the generator area
+    {
+      x: 40,
+      y: FLOOR_Y - 30,
+      width: 110,
+      height: 280,
+      color: 0x161630,
+      roofDetails: [
+        { type: 'tank', offsetX: 40 },
+        { type: 'pipes', offsetX: 6, width: 30 },
+      ],
+    },
+    // Low wide building behind right floor section (between pit and steps)
+    {
+      x: 620,
+      y: FLOOR_Y - 10,
+      width: 170,
+      height: 260,
+      color: 0x14142e,
+      roofDetails: [
+        { type: 'ac', offsetX: 18 },
+        { type: 'ac', offsetX: 80 },
+        { type: 'pipes', offsetX: 50, width: 25 },
+      ],
+    },
+    // Tall narrow building behind the step area
+    {
+      x: MID_RIGHT + 15,
+      y: MID_Y + 40,
+      width: 110,
+      height: 420,
+      color: 0x171734,
+      roofDetails: [
+        { type: 'antenna', offsetX: 55 },
+        { type: 'ac', offsetX: 10 },
+        { type: 'dish', offsetX: 75 },
+      ],
+    },
+    // Tall building under right portion of top platform
+    {
+      x: 1060,
+      y: TOP_Y + 32,
+      width: 160,
+      height: 620,
+      color: 0x191838,
+      roofDetails: [
+        { type: 'antenna', offsetX: 80 },
+        { type: 'tank', offsetX: 20 },
+        { type: 'pipes', offsetX: 115, width: 35 },
+      ],
+    },
+    // ★ HERO BUILDING — under mid platform, makes it look like a rooftop
+    {
+      x: MID_LEFT + 4,
+      y: MID_Y + 32,
+      width: MID_W - 8,
+      height: 440,
+      color: 0x1e1e3c,
+      roofDetails: [
+        { type: 'ac', offsetX: 16 },
+        { type: 'pipes', offsetX: 50, width: 60 },
+        { type: 'tank', offsetX: 130 },
+        { type: 'antenna', offsetX: 200 },
+        { type: 'ac', offsetX: 260 },
+        { type: 'dish', offsetX: 310 },
+      ],
     },
   ],
 

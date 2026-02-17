@@ -22,6 +22,7 @@ import { PLAYER } from '../config.js';
  *   - grab: holding/pushing block
  *   - jump: airborne (launching or in air)
  *   - fall: falling/descending
+ *   - attack: striking with extension cord plug
  */
 export class Player extends Phaser.Physics.Arcade.Sprite {
   /** @param {Phaser.Scene} scene */
@@ -30,7 +31,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.body.setSize(PLAYER.WIDTH, PLAYER.HEIGHT);
+    // Collision body slightly shorter than sprite to allow squeezing through tight gaps
+    this.body.setSize(PLAYER.WIDTH, 54); // 54px instead of 60px for crouching clearance
+    this.body.setOffset((38 - PLAYER.WIDTH) / 2, 48 - 54); // adjust offset for shorter body
     this.setCollideWorldBounds(true);
 
     // Play idle animation immediately
@@ -55,6 +58,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     /** Whether the player is currently dead (respawning). */
     this._isDead = false;
 
+    /** Whether the player is currently in an attack animation. */
+    this._isAttacking = false;
+
+    /** Whether the player is in the repair cutscene (blocks all input). */
+    this._isRepairing = false;
+
     /** Track current animation state for smooth transitions */
     this._currentAnimation = 'idle';
     this._wasAirborne = false;
@@ -76,6 +85,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Called every frame from GameScene.update(). */
   update() {
     if (this._isDead) return;
+    if (this._isAttacking) return; // freeze movement during attack
+    if (this._isRepairing) return; // freeze during repair cutscene
 
     const onGround = this.body.blocked.down;
     const isMoving = Math.abs(this.body.velocity.x) > 5; // Small threshold to ignore tiny movements
@@ -135,6 +146,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Plays the appropriate animation and prevents unnecessary transitions.
    */
   _updateAnimation(onGround, isMoving) {
+    // Don't override attack animation
+    if (this._isAttacking) return;
+
     let nextAnimation = 'idle';
 
     // Determine which animation should play
@@ -196,6 +210,37 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.grabbedBlock) return;
     this.grabbedBlock.release();
     this.grabbedBlock = null;
+  }
+
+  /**
+   * Perform an attack with the extension cord plug.
+   * Plays the attack animation and briefly freezes movement.
+   * @returns {boolean} true if attack started, false if cannot attack.
+   */
+  attack() {
+    if (this._isDead || this._isAttacking) return false;
+    if (this.cordConnectedTerminal) return false; // cord in use
+
+    this._isAttacking = true;
+    this.setVelocityX(0); // freeze horizontal movement
+
+    // Play attack animation
+    this._currentAnimation = 'attack';
+    this.play('attack', true);
+
+    // Emit attack event at the "strike" moment (after wind-up frame)
+    this.scene.time.delayedCall(80, () => {
+      if (this._isAttacking) {
+        this.scene.events.emit('player-attack-strike', this);
+      }
+    });
+
+    // End attack after animation completes
+    this.scene.time.delayedCall(250, () => {
+      this._isAttacking = false;
+    });
+
+    return true;
   }
 
   /**

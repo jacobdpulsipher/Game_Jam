@@ -1,7 +1,7 @@
-# Everything Is Connected — Game Jam Project
+# Sparky Joe Saves the Day — Game Jam Project
 
 ## Overview
-This is a **2D puzzle-platformer** built with **Phaser 3** for a game jam. The jam theme is **"Everything is connected"**.
+This is a **2D puzzle-platformer** called **"Sparky Joe Saves the Day"**, built with **Phaser 3** for a game jam. The jam theme is **"Everything is connected"**.
 
 ## Game Concept
 The player navigates through a series of interconnected puzzle rooms in a 2D side-scrolling platformer. Puzzles are built from reusable mechanical elements — sliding doors, elevators, drawbridges, and pushable blocks — that the player must manipulate to progress. The "everything is connected" theme manifests through puzzle mechanics where activating one element affects others in linked chains.
@@ -10,7 +10,7 @@ The player navigates through a series of interconnected puzzle rooms in a 2D sid
 - **Engine:** Phaser 3 (v3.80+)
 - **Language:** JavaScript (ES Modules)
 - **Build:** Vite
-- **Art Pipeline:** All textures procedurally generated at runtime (no external image files)
+- **Art Pipeline:** Mostly procedural textures at runtime; character PNG (`SparkyJoe_clean.png`) loaded for menu screen
 - **Audio:** Web Audio API chiptune synthesizer (procedural, no external audio files)
 
 ## Project Structure
@@ -38,7 +38,7 @@ The player navigates through a series of interconnected puzzle rooms in a 2D sid
 - **Phaser Scene lifecycle:** `preload()` → `create()` → `update()`.
 - Puzzle elements are self-contained classes with `activate()`/`deactivate()` interface.
 - Levels are **data-driven** — declarative objects in `src/levels/`, built by GameScene.
-- All textures are **procedurally generated** at runtime in PreloadScene (no external images).
+- Most textures are **procedurally generated** at runtime in PreloadScene. The menu screen loads `SparkyJoe_clean.png` as an external image.
 - Music is **procedurally synthesized** via Web Audio API (no external audio files).
 - Constants and magic numbers go in `src/config.js`.
 - Hero sprite is 48×64 pixels, physics tile size is 32×32.

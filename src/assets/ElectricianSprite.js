@@ -52,7 +52,7 @@ export function generateElectricianSpriteSheet(scene) {
   graphics.setDepth(-1);
 
   const cols = 2;
-  const rows = 7;
+  const rows = 8;
   const textureWidth = W * cols;
   const textureHeight = H * rows;
 
@@ -76,6 +76,9 @@ export function generateElectricianSpriteSheet(scene) {
   // Frame 13: FALL
   drawFall(graphics, fi++, W, H);
 
+  // Frames 14-15: ATTACK (cord strike)
+  for (let i = 0; i < 2; i++) drawAttack(graphics, fi++, W, H, i);
+
   // Generate texture & carve frames
   graphics.generateTexture('electrician', textureWidth, textureHeight);
   graphics.destroy();
@@ -98,11 +101,12 @@ export function generateElectricianSpriteSheet(scene) {
     textureKey: 'electrician',
     frames: { frameWidth: W, frameHeight: H },
     animations: {
-      idle:  { key: 'idle',  frames: [{ key: 'electrician', frame: 0 }],  frameRate: 10, repeat: -1 },
-      run:   { key: 'run',   frames: frameRange(1, 6),                    frameRate: 15, repeat: -1 },
-      grab:  { key: 'grab',  frames: frameRange(7, 10),                   frameRate: 12, repeat: -1 },
-      jump:  { key: 'jump',  frames: [{ key: 'electrician', frame: 11 }], frameRate: 18, repeat: 0  },
-      fall:  { key: 'fall',  frames: [{ key: 'electrician', frame: 13 }], frameRate: 10, repeat: -1 },
+      idle:   { key: 'idle',   frames: [{ key: 'electrician', frame: 0 }],  frameRate: 10, repeat: -1 },
+      run:    { key: 'run',    frames: frameRange(1, 6),                    frameRate: 15, repeat: -1 },
+      grab:   { key: 'grab',   frames: frameRange(7, 10),                   frameRate: 12, repeat: -1 },
+      jump:   { key: 'jump',   frames: [{ key: 'electrician', frame: 11 }], frameRate: 18, repeat: 0  },
+      fall:   { key: 'fall',   frames: [{ key: 'electrician', frame: 13 }], frameRate: 10, repeat: -1 },
+      attack: { key: 'attack', frames: frameRange(14, 15),                  frameRate: 12, repeat: 0  },
     }
   };
 }
@@ -466,4 +470,122 @@ function drawFall(g, fi, W, H) {
 
   // Cord flying
   drawCordPlug(g, px + 25, py + 21);
+}
+
+/**
+ * Attack frames — hero takes a brave stance and thrusts the
+ * extension cord plug forward like a weapon.
+ * Phase 0: Wind-up (arm pulled back, determined face)
+ * Phase 1: Strike (arm fully extended, plug out front)
+ */
+function drawAttack(g, fi, W, H, phase) {
+  const { x: px, y: py } = gp(fi, W, H);
+  const isStrike = phase === 1;
+
+  drawHat(g, px, py, isStrike ? 1 : -1);
+
+  // ── Brave / fierce face ──
+  // Skin
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 9, py + 7, 10, 9);
+  // Ear
+  g.fillStyle(PAL.skinDark, 1);
+  g.fillRect(px + 19, py + 9, 1, 3);
+  // Beard
+  g.fillStyle(PAL.beard, 1);
+  g.fillRect(px + 9, py + 12, 10, 4);
+  g.fillRect(px + 8, py + 10, 1, 4);
+  g.fillRect(px + 19, py + 10, 1, 4);
+
+  // Fierce eyes — angry brow line + bright pupils
+  // Brow (lowered, determined)
+  g.fillStyle(PAL.beard, 1);
+  g.fillRect(px + 10, py + 7, 3, 1);
+  g.fillRect(px + 15, py + 7, 3, 1);
+  // Eyes — wide and intense
+  g.fillStyle(PAL.eyeWhite, 1);
+  g.fillRect(px + 11, py + 8, 2, 2);
+  g.fillRect(px + 16, py + 8, 2, 2);
+  g.fillStyle(PAL.eye, 1);
+  g.fillRect(px + 12, py + 8, 1, 1);
+  g.fillRect(px + 17, py + 8, 1, 1);
+
+  // Cheeks
+  g.fillStyle(PAL.cheek, 1);
+  g.fillRect(px + 9, py + 11, 1, 1);
+
+  // Gritting teeth — open mouth showing teeth
+  g.fillStyle(PAL.mouth, 1);
+  g.fillRect(px + 12, py + 13, 4, 2);
+  g.fillStyle(0xffffff, 1);
+  g.fillRect(px + 12, py + 13, 4, 1);
+
+  // Neck
+  g.fillStyle(PAL.skin, 1);
+  g.fillRect(px + 12, py + 15, 4, 2);
+
+  // Body leans forward in strike
+  const lean = isStrike ? 1 : -1;
+  drawShirt(g, px, py, lean);
+  drawBelt(g, px, py);
+
+  // Legs — wide power stance
+  g.fillStyle(PAL.pants, 1);
+  g.fillRect(px + 6, py + 29, 5, 11);
+  g.fillRect(px + 17, py + 29, 5, 11);
+  // Boots — wide apart
+  g.fillStyle(PAL.boot, 1);
+  g.fillRect(px + 5, py + 40, 4, 3);
+  g.fillRect(px + 17, py + 40, 4, 3);
+  g.fillStyle(PAL.bootSole, 1);
+  g.fillRect(px + 5, py + 43, 5, 1);
+  g.fillRect(px + 17, py + 43, 5, 1);
+
+  if (isStrike) {
+    // ── STRIKE — right arm fully extended forward with plug ──
+    // Left arm pulled back for balance
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 1, py + 20, 4, 4);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 1, py + 24, 3, 2);
+
+    // Right arm thrust all the way out
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 21, py + 17, 6, 3);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 25, py + 17, 3, 3);
+
+    // Plug at the tip of the extended arm — prominent
+    // Cord segment
+    g.fillStyle(PAL.cordOrange, 1);
+    g.fillRect(px + 26, py + 20, 1, 3);
+    // Plug body (larger for visibility)
+    g.fillStyle(PAL.cordPlug, 1);
+    g.fillRect(px + 25, py + 23, 3, 3);
+    // Prongs
+    g.fillStyle(PAL.cordProng, 1);
+    g.fillRect(px + 25, py + 26, 1, 2);
+    g.fillRect(px + 27, py + 26, 1, 2);
+
+    // Spark at plug tip!
+    g.fillStyle(0xffff00, 1);
+    g.fillRect(px + 24, py + 22, 1, 1);
+    g.fillRect(px + 26, py + 20, 1, 1);
+  } else {
+    // ── WIND-UP — arm cocked back ──
+    // Left arm forward for counterbalance
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 3, py + 16, 3, 5);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 3, py + 21, 3, 2);
+
+    // Right arm pulled back
+    g.fillStyle(PAL.shirt, 1);
+    g.fillRect(px + 22, py + 14, 3, 5);
+    g.fillStyle(PAL.skin, 1);
+    g.fillRect(px + 22, py + 12, 3, 3);
+
+    // Plug behind (coiled)
+    drawCordPlug(g, px + 24, py + 12);
+  }
 }

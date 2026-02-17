@@ -77,6 +77,11 @@ export class PushBlock extends Phaser.Physics.Arcade.Sprite {
     this._grabber = player;
     this._grabOffsetX = this.x - player.x;
 
+    // Make body kinematic while grabbed - we control position directly
+    this.body.moves = false;
+    this.setVelocityX(0);
+    this.setVelocityY(0);
+
     // Brighten the crate when grabbed
     this.setTint(0xdddddd);
   }
@@ -89,8 +94,12 @@ export class PushBlock extends Phaser.Physics.Arcade.Sprite {
     this._grabber = null;
     this.inForeground = false;
     this.clearTint();
-    // Stop horizontal movement on release
+    
+    // Re-enable physics movement and sync body to current sprite position
+    this.body.moves = true;
+    this.body.reset(this.x, this.y);
     this.setVelocityX(0);
+    this.setVelocityY(0);
   }
 
   /**
@@ -101,15 +110,66 @@ export class PushBlock extends Phaser.Physics.Arcade.Sprite {
   moveWith(player) {
     if (!this.isGrabbed) return false;
 
-    // If block is falling (not on ground), auto-release
-    if (!this.body.blocked.down) {
+    // If player is not on ground, auto-release
+    if (!player.body.blocked.down) {
       return false; // signal to player to release
     }
 
-    // Move block to follow player horizontally
+    // Store old position for potential rollback
+    const oldX = this.x;
+    
+    // Calculate target position based on player position and grab offset
     const targetX = player.x + this._grabOffsetX;
+    
+    // Move block to new position - update both position and prev to prevent velocity drift
+    const bodyX = targetX - this.body.halfWidth;
+    this.body.position.x = bodyX;
+    this.body.prev.x = bodyX;
     this.x = targetX;
-    this.setVelocityX(player.body.velocity.x);
+    
+    // Check if block is now overlapping with any obstacle (door, elevator, drawbridge)
+    const scene = this.scene;
+    let blocked = false;
+    
+    // Check doors
+    if (scene._doors) {
+      for (const door of scene._doors) {
+        if (scene.physics.overlap(this, door)) {
+          blocked = true;
+          break;
+        }
+      }
+    }
+    
+    // Check elevators
+    if (!blocked && scene._elevators) {
+      for (const elev of scene._elevators) {
+        if (scene.physics.overlap(this, elev)) {
+          blocked = true;
+          break;
+        }
+      }
+    }
+    
+    // Check drawbridges
+    if (!blocked && scene._drawbridges) {
+      for (const bridge of scene._drawbridges) {
+        if (bridge.bridgeBody.body.enable && scene.physics.overlap(this, bridge.bridgeBody)) {
+          blocked = true;
+          break;
+        }
+      }
+    }
+    
+    if (blocked) {
+      // Rollback position and stop movement
+      const oldBodyX = oldX - this.body.halfWidth;
+      this.body.position.x = oldBodyX;
+      this.body.prev.x = oldBodyX;
+      this.x = oldX;
+      player.setVelocityX(0);
+    }
+    
     this._syncTop();
     this._label.x = this.x;
     return true;

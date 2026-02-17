@@ -1,300 +1,219 @@
-import { GAME_HEIGHT, PUSH_BLOCK, ELEVATOR, DOOR, SPIKES, DRAWBRIDGE } from '../config.js';
+import { PUSH_BLOCK, ELEVATOR, TERMINAL } from '../config.js';
 
 /**
- * Level 04 — "Tower Descent"
+ * Level 04 — "Power Climb"
  *
- * Layout (ASCII map - read from top to bottom):
+ * Staircase layout — four ascending tiers, left to right:
  *
- *   Top (Y≈100):    [G1 ★]═══════════════════════════════════
- *                      ↓ (stairs down)
- *   A (Y≈200):      [E1]→  [T1]  (mid-air platform)
- *                      ↓ (fall or E1)
- *   B (Y≈340):         [DB1]  [—elevator tower—]
- *                       /\                |
- *                      /  \             [T2]
- *                 (spikes)         [Mid tower platform]
- *                      ↓
- *   C (Y≈480):      [D1]  [stairs]  [B1]  [B2 floating]
- *                      |              |
- *                      ↓ (if D1 open)
- *   D (Y≈600):      [T3]  [E2→E3 chain]  [DB2 spanning]
- *                                          |
- *   Bottom (Y≈680+): [Spikes bed]  [T4]  [block catches]
+ *   G1 ──┐  (ledge, top-left)
+ *         │
+ *         │  (sheer drop)
+ *         │
+ *   ══════╧═══[ E1 ]═══════════════════════════════════  Tier 0 (y=640)
+ *     T1       shaft
+ *              [  ↕  ]
+ *                        ════════[ E2 ]══════  Tier 1 (y=510)
+ *                        T2  B   shaft
+ *                                [  ↕  ]
+ *                                       ═══════════  Tier 2 (y=350)
+ *                                          G2
+ *                                                 ═══════  Tier 3 (y=220)
+ *                                                   G3 ★
  *
- * Multiple routes & solutions:
- *   Route A: Elevator path through tower
- *   Route B: Staircase + drawbridge path
- *   Both converge at bottom where final block puzzle is
+ * Tier gaps:
+ *   Tier 0→1: 130px  (block+jump=146px → climbable with block)
+ *   Tier 1→2: 160px  (block+jump=146px → NOT climbable, elevator required)
+ *   Tier 2→3: 130px  (block+jump=146px → climbable with block)
  *
- * Difficulty: Hard - requires spatial reasoning, timing, multi-element coordination
+ * Elevators have "shaft" gaps in the platforms so blocks can ride them
+ * without being held up by the adjacent platform. When an elevator is
+ * at its rest position (startY), it fills the shaft flush with the tier.
+ *
+ * Puzzle Solution (11 steps):
+ *   1. Drop from G1 ledge to Tier 0
+ *   2. Plug cord into T1 → E1 activates (cycles Tier 0 ↔ Tier 1)
+ *   3. Ride E1 up to Tier 1, grab Block B
+ *   4. Walk Block B onto E1 at Tier 1, ride E1 down to Tier 0
+ *   5. Release block on Tier 0, unplug cord from T1 (E1 deactivates)
+ *   6. Place Block B near Tier 1 edge, stand on it, jump up to Tier 1
+ *   7. On Tier 1, plug cord into T2 → E2 activates
+ *   8. Ride E2 up to Tier 2
+ *   9. Activate G2 (press E near it) → permanently powers E1 & E2
+ *  10. Jump down to Tier 0, push Block onto E1 → Tier 1 → E2 → Tier 2
+ *  11. Place Block near Tier 3 edge on Tier 2, climb to G3 → Level Complete!
+ *
+ * Key mechanics:
+ *   - Cord management: plug T1 first, unplug, reuse for T2
+ *   - Block transport: use elevator shafts to move block between tiers
+ *   - Generator activation: G2 permanently powers E1 & E2 (press E)
+ *
+ * Difficulty: Medium-Hard
  */
 
-const WORLD_W = 1400;
-const WORLD_H = 1300;     // Significantly taller than previous levels
+const WORLD_W = 1200;
+const WORLD_H = 768;
 
-// ─── Platform Heights (Y coordinates) ───────────────────────────
-const TOP_Y = 100;        // Starting ledge with G1
-const LEVEL_A = 200;      // First mid-air platform
-const LEVEL_B = 340;      // Drawbridge level
-const LEVEL_C = 480;      // Main mid-level
-const LEVEL_D = 620;      // Lower platform
-const FLOOR_Y = 760;      // Bottom floor
-const PIT_BOTTOM = FLOOR_Y + 120;
+// ─── Tier Surfaces (Y coordinate where entities walk) ───────────
+const G1_LEDGE_Y = 100;     // G1 ledge surface (top-left)
+const TIER0_Y    = 640;     // ground floor
+const TIER1_Y    = 510;     // 130px above tier 0 (block-climbable)
+const TIER2_Y    = 350;     // 160px above tier 1 (elevator only)
+const TIER3_Y    = 220;     // 130px above tier 2 (block-climbable)
 
-// ─── Horizontal Sections ────────────────────────────────────────
-// Top Section
-const G1_X = 100;
-const TOP_LEDGE_LEFT = 80;
-const TOP_LEDGE_RIGHT = WORLD_W - 80;
+// ─── Horizontal Spans ───────────────────────────────────────────
+// Tier 0 (ground floor) — split by E1 shaft
+const T0_LEFT_L  = 16;      // tier 0 left section start
+const T0_LEFT_R  = 310;     // tier 0 left section end
+const E1_SHAFT_L = 310;     // E1 shaft gap start
+const E1_SHAFT_R = 410;     // E1 shaft gap end
+const T0_RIGHT_L = 410;     // tier 0 right section start
+const T0_RIGHT_R = 1184;    // tier 0 right section end
 
-// Level A: First air platform with elevator
-const E1_X = 200;
-const T1_X = 300;
-const LEVEL_A_LEFT = 160;
-const LEVEL_A_RIGHT = 400;
+// Tier 1 — split by E2 shaft
+const T1_LEFT_L  = 410;     // tier 1 left section start (= E1 shaft right)
+const T1_LEFT_R  = 570;     // tier 1 left section end
+const E2_SHAFT_L = 570;     // E2 shaft gap start
+const E2_SHAFT_R = 670;     // E2 shaft gap end
+const T1_RIGHT_L = 670;     // tier 1 right section start
+const T1_RIGHT_R = 780;     // tier 1 right section end
 
-// Level B: Drawbridge and tower section
-const DB1_PIVOT_X = 500;
-const DB1_PIVOT_Y = LEVEL_B;
-const TOWER_X = 750;        // Vertical elevator tower
-const T2_X = 750;
-const LEVEL_B_PLATFORM_LEFT = 650;
-const LEVEL_B_PLATFORM_RIGHT = 850;
+// Tier 2 — continuous
+const T2_LEFT    = 670;     // starts at E2 shaft right edge
+const T2_RIGHT   = 1030;
 
-// Level C: Main mid-section with doors and blocks
-const D1_X = 300;
-const STAIRS_C_X = 450;
-const B1_X = 600;
-const B2_X = 950;           // Floating block positioned above spikes
+// Tier 3 — continuous
+const T3_LEFT    = 980;
+const T3_RIGHT   = 1184;
 
-// Spikes pit (spans much of the level horizontally)
-const SPIKE_ZONE_LEFT = 80;
-const SPIKE_ZONE_RIGHT = 500;
-const SPIKE_ZONE_CENTER = (SPIKE_ZONE_LEFT + SPIKE_ZONE_RIGHT) / 2;
+// ─── Element Positions ─────────────────────────────────────────
+const G1_X     = 100;
+const PLAYER_X = 100;
 
-// Level D: Lower section with second drawbridge
-const T3_X = 250;
-const E2_X = 600;
-const E3_X = 750;           // Chained elevator
-const DB2_PIVOT_X = 1000;
-const DB2_PIVOT_Y = LEVEL_D;
-const T4_X = WORLD_W - 200;
+const T1_X     = 200;       // terminal on tier 0 left
+const E1_X     = 360;       // elevator center (shaft: 310–410)
+const E1_W     = 100;       // wider elevator for block transport
 
-// Bottom: Goal
-const G2_X = WORLD_W - 100;
-const GOAL_X = G2_X;
-const GOAL_Y = TOP_Y - 20;  // Goal at top (like escaping a tower)
+const B_X      = 490;       // push block on tier 1 left
+const T2_X     = 450;       // terminal on tier 1 left
+const E2_X     = 620;       // elevator center (shaft: 570–670)
+const E2_W     = 100;       // wider elevator for block transport
 
-// ─── Trigger Zones for Secondary Activation ────────────────────
-const TRIGGER_ZONE_1_X = 350;
-const TRIGGER_ZONE_1_Y = LEVEL_A + 80;
-const TRIGGER_ZONE_2_X = 700;
-const TRIGGER_ZONE_2_Y = LEVEL_B + 100;
-const TRIGGER_ZONE_3_X = 600;
-const TRIGGER_ZONE_3_Y = LEVEL_C + 100;
+const G2_X     = 850;       // secondary generator on tier 2
+const G3_X     = 1080;      // goal generator on tier 3
+
+// ─── Elevator Y Positions ──────────────────────────────────────
+// Flush with tier surfaces: elevator surface (center − h/2) = tier Y
+// → center = tier Y + ELEVATOR.HEIGHT / 2
+const E1_START_Y = TIER0_Y + ELEVATOR.HEIGHT / 2;   // 648 (surface at 640)
+const E1_END_Y   = TIER1_Y + ELEVATOR.HEIGHT / 2;   // 518 (surface at 510)
+const E2_START_Y = TIER1_Y + ELEVATOR.HEIGHT / 2;   // 518 (surface at 510)
+const E2_END_Y   = TIER2_Y + ELEVATOR.HEIGHT / 2;   // 358 (surface at 350)
+
+// ─── Platform Helper ────────────────────────────────────────────
+function plat(left, right, surfaceY) {
+  const w = right - left;
+  return {
+    x: left + w / 2,
+    y: surfaceY + 16,       // center of 32px-tall platform
+    width: w,
+    height: 32,
+  };
+}
+
+// ─── Cord Distance Verification ─────────────────────────────────
+// G1 at (100, 80).
+//   T1 (200, 624): √(100² + 544²) ≈ 553  < 750  ✓
+//   T2 (450, 494): √(350² + 414²) ≈ 542  < 750  ✓
 
 export const LEVEL_04 = {
   id: 'level_04',
-  name: 'Tower Descent',
-  nextLevel: null,          // Final level
+  name: 'Power Climb',
+  nextLevel: 'level_05',
 
   world: { width: WORLD_W, height: WORLD_H },
-  bgColor: '#0f1419',       // Darker theme for advanced level
+  bgColor: '#121a24',
 
   // ── Platforms ──────────────────────────────────────────
   platforms: [
-    // TOP LEDGE (starting platform with G1)
-    { x: (TOP_LEDGE_LEFT + TOP_LEDGE_RIGHT) / 2, y: TOP_Y + 16, width: TOP_LEDGE_RIGHT - TOP_LEDGE_LEFT, height: 32 },
+    // G1 Ledge (top-left starting platform)
+    plat(T0_LEFT_L, 200, G1_LEDGE_Y),
 
-    // Stairs from top down to Level A (visual assist)
-    { x: 120, y: TOP_Y + 60, width: 60, height: 40 },
-    { x: 140, y: TOP_Y + 120, width: 60, height: 40 },
+    // Tier 0 ground floor (split by E1 shaft)
+    plat(T0_LEFT_L,  T0_LEFT_R,  TIER0_Y),    // left section
+    plat(T0_RIGHT_L, T0_RIGHT_R, TIER0_Y),    // right section
 
-    // LEVEL A (mid-air platform with E1)
-    { x: (LEVEL_A_LEFT + LEVEL_A_RIGHT) / 2, y: LEVEL_A + 16, width: LEVEL_A_RIGHT - LEVEL_A_LEFT, height: 32 },
+    // Tier 1 (split by E2 shaft)
+    plat(T1_LEFT_L,  T1_LEFT_R,  TIER1_Y),    // left section
+    plat(T1_RIGHT_L, T1_RIGHT_R, TIER1_Y),    // right section
 
-    // Tower platform at Level B (support for elevator)
-    { x: LEVEL_B_PLATFORM_LEFT + (LEVEL_B_PLATFORM_RIGHT - LEVEL_B_PLATFORM_LEFT) / 2, y: LEVEL_B + 16, width: LEVEL_B_PLATFORM_RIGHT - LEVEL_B_PLATFORM_LEFT, height: 32 },
+    // Tier 2
+    plat(T2_LEFT, T2_RIGHT, TIER2_Y),
 
-    // Stairs from top down (alternative path)
-    { x: STAIRS_C_X, y: LEVEL_A + 80, width: 60, height: 40 },
-    { x: STAIRS_C_X, y: LEVEL_A + 140, width: 60, height: 40 },
-    { x: STAIRS_C_X, y: LEVEL_C - 40, width: 60, height: 40 },
+    // Tier 3
+    plat(T3_LEFT, T3_RIGHT, TIER3_Y),
 
-    // LEVEL C (main mid-platform, accessible via elevator or stairs)
-    { x: 400, y: LEVEL_C + 16, width: 300, height: 32 },
-    { x: 750, y: LEVEL_C + 16, width: 300, height: 32 },
-
-    // Spike platforms (allow walking over spikes if careful, but risky)
-    // Left spike area platform
-    { x: SPIKE_ZONE_CENTER, y: PIT_BOTTOM + 16, width: SPIKE_ZONE_RIGHT - SPIKE_ZONE_LEFT - 20, height: 32 },
-
-    // LEVEL D (lower platform)
-    { x: 400, y: LEVEL_D + 16, width: 350, height: 32 },
-    { x: 950, y: LEVEL_D + 16, width: 350, height: 32 },
-
-    // Main floor (bottom level with goal)
-    { x: WORLD_W / 2, y: FLOOR_Y + 16, width: WORLD_W - 16, height: 32 },
-
-    // Pit floor (blocks fall here)
-    { x: (SPIKE_ZONE_LEFT + 800) / 2, y: PIT_BOTTOM + 16, width: 800, height: 32 },
-
-    // Walls
-    { x: 8, y: WORLD_H / 2, width: 16, height: WORLD_H },
-    { x: WORLD_W - 8, y: WORLD_H / 2, width: 16, height: WORLD_H },
+    // Boundary walls
+    { x: 8,            y: WORLD_H / 2, width: 16, height: WORLD_H },  // left
+    { x: WORLD_W - 8,  y: WORLD_H / 2, width: 16, height: WORLD_H },  // right
 
     // Ceiling
-    { x: WORLD_W / 2, y: 8, width: WORLD_W, height: 16 },
+    { x: WORLD_W / 2,  y: 8,           width: WORLD_W, height: 16 },
   ],
 
   // ── Player ─────────────────────────────────────────────
-  player: { x: G1_X + 50, y: TOP_Y - 40, generatorId: 'g1' },
+  player: { x: PLAYER_X, y: G1_LEDGE_Y - 40, generatorId: 'g1' },
 
   // ── Generators ─────────────────────────────────────────
   generators: [
-    { id: 'g1', x: G1_X, y: TOP_Y - 20, label: 'G1' },
-    { id: 'g2', x: G2_X, y: FLOOR_Y - 20, label: 'G2 (Goal)' },
+    { id: 'g1', x: G1_X,  y: G1_LEDGE_Y - 20, label: 'G1', isPrimary: true },
+    {
+      id: 'g2', x: G2_X, y: TIER2_Y - 20, label: 'G2',
+      isPrimary: false,
+      autoActivateIds: ['e1', 'e2'],  // permanently powers both elevators
+    },
+    { id: 'g3', x: G3_X,  y: TIER3_Y - 20, label: 'G3' },
   ],
 
   // ── Terminals ──────────────────────────────────────────
   terminals: [
-    // T1: at Level A, controls E1 (elevator up)
-    { id: 't1', x: T1_X, y: LEVEL_A - 16, linkTo: 'e1' },
-    // T2: on tower platform, controls main elevator chain
-    { id: 't2', x: T2_X, y: LEVEL_B - 16, linkTo: 'e2' },
-    // T3: at Level C/D, controls D1 door
-    { id: 't3', x: T3_X, y: LEVEL_C - 16, linkTo: 'd1' },
-    // T4: on right side lower level, controls DB2
-    { id: 't4', x: T4_X, y: LEVEL_D - 16, linkTo: 'db2' },
-  ],
-
-  // ── Doors ──────────────────────────────────────────────
-  doors: [
-    // D1: blocking middle path, requires T3 to open
-    {
-      id: 'd1',
-      x: D1_X,
-      y: LEVEL_C - DOOR.HEIGHT / 2,
-      direction: 'right',
-      range: 200,
-    },
+    // T1: on tier 0, controls E1
+    { id: 't1', x: T1_X, y: TIER0_Y - TERMINAL.HEIGHT / 2, linkTo: 'e1' },
+    // T2: on tier 1, controls E2
+    { id: 't2', x: T2_X, y: TIER1_Y - TERMINAL.HEIGHT / 2, linkTo: 'e2' },
   ],
 
   // ── Elevators ──────────────────────────────────────────
   elevators: [
-    // E1: from Level A up to Level B (short segment)
+    // E1: Tier 0 ↔ Tier 1  (shaft gap in tier 0 floor)
     {
       id: 'e1',
       x: E1_X,
-      startY: LEVEL_A - ELEVATOR.HEIGHT / 2,
-      endY: LEVEL_B - 100 - ELEVATOR.HEIGHT / 2,
-      speed: 80,
-      pauseDuration: 600,
+      startY: E1_START_Y,
+      endY: E1_END_Y,
+      width: E1_W,
+      speed: 100,
+      pauseDuration: 1200,
+      label: 'E1',
     },
-    // E2: from Level B down to Level C (long drop)
+    // E2: Tier 1 ↔ Tier 2  (shaft gap in tier 1 floor)
     {
       id: 'e2',
-      x: TOWER_X,
-      startY: LEVEL_B - ELEVATOR.HEIGHT / 2,
-      endY: LEVEL_C + 200 - ELEVATOR.HEIGHT / 2,
-      speed: 90,
-      pauseDuration: 700,
-    },
-    // E3: from Level C down to Level D (continuation)
-    {
-      id: 'e3',
-      x: E3_X,
-      startY: LEVEL_C + 50 - ELEVATOR.HEIGHT / 2,
-      endY: LEVEL_D - ELEVATOR.HEIGHT / 2,
-      speed: 80,
-      pauseDuration: 500,
+      x: E2_X,
+      startY: E2_START_Y,
+      endY: E2_END_Y,
+      width: E2_W,
+      speed: 100,
+      pauseDuration: 1200,
+      label: 'E2',
     },
   ],
 
   // ── Push Blocks ────────────────────────────────────────
   pushBlocks: [
-    // B1: on mid-level platform, can be pushed around
-    { id: 'b1', x: B1_X, y: LEVEL_C - PUSH_BLOCK.SIZE / 2 },
-    // B2: floating above spikes (will fall), player must catch and position
-    { id: 'b2', x: B2_X, y: LEVEL_C - 100 },
-  ],
-
-  // ── Drawbridges ────────────────────────────────────────
-  drawbridges: [
-    // DB1: at Level B, connects alternate route over spikes
-    {
-      id: 'db1',
-      pivotX: DB1_PIVOT_X,
-      pivotY: DB1_PIVOT_Y,
-      width: 200,
-      height: 16,
-      direction: 'right',
-      speed: 100,
-    },
-    // DB2: at Level D, spans lower section (extended)
-    {
-      id: 'db2',
-      pivotX: DB2_PIVOT_X,
-      pivotY: DB2_PIVOT_Y,
-      width: 280,
-      height: 16,
-      direction: 'left',
-      speed: 110,
-    },
-  ],
-
-  // ── Spikes ────────────────────────────────────────────
-  spikes: [
-    // Large spike pit covering much of the lower-middle section
-    {
-      id: 'spikes_main',
-      x: SPIKE_ZONE_CENTER,
-      y: PIT_BOTTOM - SPIKES.HEIGHT / 2,
-      width: SPIKE_ZONE_RIGHT - SPIKE_ZONE_LEFT - 20,
-    },
-    // Secondary spike zone at bottom
-    {
-      id: 'spikes_bottom',
-      x: 200,
-      y: FLOOR_Y - SPIKES.HEIGHT / 2,
-      width: 300,
-    },
-  ],
-
-  // ── Trigger Zones ──────────────────────────────────────
-  triggerZones: [
-    // When player reaches Level A area, unlock E1 path
-    {
-      id: 'trigger_level_a',
-      x: TRIGGER_ZONE_1_X,
-      y: TRIGGER_ZONE_1_Y,
-      width: 200,
-      height: 150,
-      triggersIds: ['e1'],
-      description: 'Upper tower unlock',
-    },
-    // When player reaches Level B tower, unlock main descent
-    {
-      id: 'trigger_level_b',
-      x: TRIGGER_ZONE_2_X,
-      y: TRIGGER_ZONE_2_Y,
-      width: 200,
-      height: 150,
-      triggersIds: ['e2'],
-      description: 'Tower descent unlock',
-    },
-    // When player reaches mid-level, unlock lower path
-    {
-      id: 'trigger_level_c',
-      x: TRIGGER_ZONE_3_X,
-      y: TRIGGER_ZONE_3_Y,
-      width: 250,
-      height: 150,
-      triggersIds: ['e3', 'd1'],
-      description: 'Mid-level cascade',
-    },
+    // Block B: starts on tier 1 left — must be transported to tier 2 for final climb
+    { id: 'b1', x: B_X, y: TIER1_Y - PUSH_BLOCK.SIZE / 2 },
   ],
 
   // ── Goal ───────────────────────────────────────────────
-  goal: { x: GOAL_X, y: GOAL_Y },
+  goal: { x: G3_X, y: TIER3_Y - 30 },
 };

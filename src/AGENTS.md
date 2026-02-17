@@ -6,7 +6,7 @@ All game logic lives here. Code is organized by responsibility.
 ## Directory Layout
 | Folder      | Description |
 |-------------|-------------|
-| `assets/`   | Procedural texture generators (`AssetTextures.js`) and hero spritesheet builder (`ElectricianSprite.js`). |
+| `assets/`   | Procedural texture generators (`AssetTextures.js`), hero spritesheet builder (`SparkySprite.js`), character art (`SparkyJoe_clean.png` for menu), and worker sprite (`WorkerSprite.js`). |
 | `audio/`    | Web Audio API chiptune synthesizer (`ProceduralMusic.js`) — menu, level, and victory tracks. |
 | `scenes/`   | Phaser Scenes — each manages a distinct phase of the game (boot, preload, menu, gameplay, UI overlay). |
 | `entities/` | Game objects with behavior — the player, generators, terminals, extension cord, spikes. |
@@ -27,6 +27,6 @@ All game logic lives here. Code is organized by responsibility.
 - Phaser lifecycle methods: `preload()`, `create()`, `update(time, delta)`.
 - Puzzle elements implement `activate()` / `deactivate()` interface.
 - Puzzle elements use **options object constructors** for easy dimension/position/behavior tuning.
-- All textures are generated procedurally in `PreloadScene` (no external image files for MVP).
+- Most textures are generated procedurally in `PreloadScene`. The menu screen loads `SparkyJoe_clean.png` as an external character image.
 - Use values from `config.js` instead of inline magic numbers.
 - Physics: Arcade mode with gravity = 900. Platforms use `staticGroup`. Puzzle elements use static bodies + tweens.

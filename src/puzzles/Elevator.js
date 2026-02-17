@@ -132,6 +132,7 @@ export class Elevator extends Phaser.Physics.Arcade.Sprite {
 
   /** Power off → return to startY and stop. */
   deactivate() {
+    if (this._permanentlyPowered) return; // generator-linked: stays on permanently
     if (!this._isActive) return;
     this._isActive = false;
     this.setTexture(this._keyOff);

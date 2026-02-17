@@ -255,112 +255,172 @@ export function generateWoodenCrate(scene, size = 48, color = '#8B6914') {
 }
 
 /**
- * Generate an electrical outlet texture (2-prong).
+ * Generate a circular 3-prong electrical outlet texture.
+ * Off-white face plate with black prong slots (standard US outlet).
+ * When powered, a plug appears inserted and a small LED glows on top.
  * @param {Phaser.Scene} scene - The Phaser scene
- * @param {boolean} powered - Whether the outlet is powered (glowing)
+ * @param {boolean} powered - Whether the outlet is powered (plug inserted)
  * @returns {string} Texture key
  */
 export function generateOutlet(scene, powered = false) {
   const key = `outlet_${powered ? 'on' : 'off'}`;
-  
+
   if (scene.textures.exists(key)) {
     return key;
   }
-  
-  const width = 16;
-  const height = 24;
-  const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-  
-  // Outlet housing (black plastic)
-  graphics.fillStyle(0x1a1a1a, 1);
-  graphics.fillRect(0, 0, width, height);
-  
-  // Light gray border/frame
-  graphics.lineStyle(1, 0x444444, 1);
-  graphics.strokeRect(0, 0, width, height);
-  
-  // Two circular holes (prongs)
-  const holeRadius = 2;
-  const holeX1 = width / 3;
-  const holeX2 = (width * 2) / 3;
-  const holeYTop = 6;
-  const holeYBottom = 18;
-  
-  // Holes are darker/shadowed
-  graphics.fillStyle(0x0a0a0a, 1);
-  graphics.fillCircle(holeX1, holeYTop, holeRadius);
-  graphics.fillCircle(holeX2, holeYBottom, holeRadius);
-  
-  // Outline of holes
-  graphics.lineStyle(0.5, 0x333333, 1);
-  graphics.strokeCircle(holeX1, holeYTop, holeRadius);
-  graphics.strokeCircle(holeX2, holeYBottom, holeRadius);
-  
-  // If powered, add green glow
-  if (powered) {
-    graphics.lineStyle(1, 0x00ff00, 0.6);
-    graphics.strokeCircle(holeX1, holeYTop, holeRadius + 1);
-    graphics.strokeCircle(holeX2, holeYBottom, holeRadius + 1);
-    
-    // Green accent line at bottom
-    graphics.lineStyle(1, 0x00dd00, 0.5);
-    graphics.lineBetween(2, height - 2, width - 2, height - 2);
+
+  const size = 32; // square canvas (extra room for box behind circle)
+  const cx = size / 2;
+  const cy = size / 2;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  // --- Gray junction box behind the outlet ---
+  g.fillStyle(0x555555, 1);
+  g.fillRoundedRect(1, 1, size - 2, size - 2, 3);
+  // Box border
+  g.lineStyle(1, 0x3a3a3a, 1);
+  g.strokeRoundedRect(1, 1, size - 2, size - 2, 3);
+  // Top edge highlight
+  g.lineStyle(1, 0x6a6a6a, 0.5);
+  g.beginPath();
+  g.moveTo(3, 2); g.lineTo(size - 3, 2);
+  g.strokePath();
+
+  // --- Circular face plate ---
+  // Shadow behind plate
+  g.fillStyle(0x222222, 0.5);
+  g.fillCircle(cx + 1, cy + 1, 12);
+  // Off-white plate
+  g.fillStyle(0xede8df, 1);
+  g.fillCircle(cx, cy, 12);
+  // Subtle rim
+  g.lineStyle(1, 0xc5c0b7, 1);
+  g.strokeCircle(cx, cy, 12);
+  // Inner bevel highlight (top arc, faked with a lighter fill)
+  g.fillStyle(0xf5f2ec, 0.6);
+  g.fillCircle(cx, cy - 1, 10);
+  // Inner bevel shadow (bottom)
+  g.fillStyle(0xd8d3ca, 0.4);
+  g.fillRect(cx - 9, cy + 2, 18, 7);
+
+  if (!powered) {
+    // --- 3-prong holes (unplugged) ---
+    // Left slot (hot) — vertical rectangle
+    g.fillStyle(0x111111, 1);
+    g.fillRect(cx - 5, cy - 4, 2, 6);
+    // Right slot (neutral) — vertical rectangle (slightly taller)
+    g.fillRect(cx + 3, cy - 5, 2, 7);
+    // Bottom slot (ground) — half-circle / round hole
+    g.fillCircle(cx, cy + 5, 1.8);
+
+    // Slot outlines for depth
+    g.lineStyle(0.5, 0x333333, 0.6);
+    g.strokeRect(cx - 5, cy - 4, 2, 6);
+    g.strokeRect(cx + 3, cy - 5, 2, 7);
+    g.strokeCircle(cx, cy + 5, 1.8);
+
+    // Center screw
+    g.fillStyle(0xb0aba2, 1);
+    g.fillCircle(cx, cy - 9, 1.2);
+    g.fillStyle(0xd5d0c7, 0.8);
+    g.fillCircle(cx - 0.3, cy - 9.3, 0.5);
   } else {
-    // Neutral gray accent when off
-    graphics.lineStyle(0.5, 0x555555, 0.4);
-    graphics.lineBetween(2, height - 2, width - 2, height - 2);
+    // --- Plugged-in state ---
+    // Plug body (dark gray plastic, covers the prong area)
+    g.fillStyle(0x3a3a3a, 1);
+    g.fillRoundedRect(cx - 6, cy - 6, 12, 13, 2);
+    // Plug highlight edge
+    g.lineStyle(0.5, 0x555555, 0.8);
+    g.strokeRoundedRect(cx - 6, cy - 6, 12, 13, 2);
+    // Plug body sheen
+    g.fillStyle(0x4a4a4a, 0.5);
+    g.fillRect(cx - 4, cy - 5, 8, 2);
+
+    // Cord coming out the bottom of the plug
+    g.lineStyle(2, 0x333333, 1);
+    g.beginPath();
+    g.moveTo(cx, cy + 7);
+    g.lineTo(cx, cy + 12);
+    g.strokePath();
+    // Cord highlight
+    g.lineStyle(0.5, 0x555555, 0.5);
+    g.beginPath();
+    g.moveTo(cx - 0.5, cy + 7);
+    g.lineTo(cx - 0.5, cy + 12);
+    g.strokePath();
+
+    // Center screw (still visible above plug)
+    g.fillStyle(0xb0aba2, 1);
+    g.fillCircle(cx, cy - 9, 1.2);
+    g.fillStyle(0xd5d0c7, 0.8);
+    g.fillCircle(cx - 0.3, cy - 9.3, 0.5);
+
+    // --- Glow indicator LED on top ---
+    // Outer glow halo
+    g.fillStyle(0x00ff44, 0.15);
+    g.fillCircle(cx, cy - 12, 5);
+    g.fillStyle(0x00ff44, 0.25);
+    g.fillCircle(cx, cy - 12, 3);
+    // LED dot
+    g.fillStyle(0x00ff88, 1);
+    g.fillCircle(cx, cy - 12, 1.5);
+    // Specular
+    g.fillStyle(0xaaffcc, 0.9);
+    g.fillCircle(cx - 0.3, cy - 12.3, 0.6);
   }
-  
-  graphics.generateTexture(key, width, height);
-  graphics.destroy();
-  
+
+  g.generateTexture(key, size, size);
+  g.destroy();
+
   return key;
 }
 
 /**
- * Generate a 2-prong electrical plug texture.
+ * Generate a 3-prong electrical plug texture.
  * Used for extension cord ends.
  * @param {Phaser.Scene} scene - The Phaser scene
  * @returns {string} Texture key
  */
 export function generatePlug(scene) {
   const key = 'plug_2prong';
-  
+
   if (scene.textures.exists(key)) {
     return key;
   }
-  
-  const width = 8;
-  const height = 12;
-  const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-  
-  // Plastic housing (white/cream)
-  graphics.fillStyle(0xf5f5dc, 1);
-  graphics.fillRect(0, 0, width, height);
-  
+
+  const width = 10;
+  const height = 16;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+  const cx = width / 2;
+
+  // Plastic housing (off-white / cream)
+  g.fillStyle(0xf0eade, 1);
+  g.fillRoundedRect(0, 0, width, height - 5, 2);
+
   // Dark outline
-  graphics.lineStyle(1, 0x444444, 1);
-  graphics.strokeRect(0, 0, width, height);
-  
-  // Two prongs (gold/brass color)
-  const prongWidth = 1;
-  const prongHeight = 6;
-  const prongX1 = 2;
-  const prongX2 = 5;
-  const prongY = 6;
-  
-  graphics.fillStyle(0xdaa520, 1);
-  graphics.fillRect(prongX1, prongY, prongWidth, prongHeight);
-  graphics.fillRect(prongX2, prongY, prongWidth, prongHeight);
-  
-  // Prong details (shiny)
-  graphics.lineStyle(0.5, 0xffff99, 0.6);
-  graphics.lineBetween(prongX1 + 0.5, prongY, prongX1 + 0.5, prongY + prongHeight);
-  graphics.lineBetween(prongX2 + 0.5, prongY, prongX2 + 0.5, prongY + prongHeight);
-  
-  graphics.generateTexture(key, width, height);
-  graphics.destroy();
-  
+  g.lineStyle(1, 0x888888, 1);
+  g.strokeRoundedRect(0, 0, width, height - 5, 2);
+
+  // Three prongs extending down
+  const prongColor = 0xc8b830;
+  // Left prong (flat blade)
+  g.fillStyle(prongColor, 1);
+  g.fillRect(cx - 4, height - 7, 1.5, 7);
+  // Right prong (flat blade, slightly taller)
+  g.fillRect(cx + 2, height - 8, 1.5, 8);
+  // Ground prong (round pin, center bottom)
+  g.fillStyle(prongColor, 1);
+  g.fillCircle(cx, height - 2, 1.2);
+  g.fillRect(cx - 0.6, height - 6, 1.2, 4);
+
+  // Prong highlights
+  g.lineStyle(0.5, 0xeeee77, 0.5);
+  g.lineBetween(cx - 3.5, height - 7, cx - 3.5, height);
+  g.lineBetween(cx + 2.5, height - 8, cx + 2.5, height);
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+
   return key;
 }
 
@@ -384,7 +444,6 @@ export function initializeAssetTextures(scene) {
   generateDrawbridge(scene, 128, 16);
   
   // Generate standard crate size
-  generateWoodenCrate(scene, 72);
   generateWoodenCrate(scene, 48);
   generateWoodenCrate(scene, 32);
   

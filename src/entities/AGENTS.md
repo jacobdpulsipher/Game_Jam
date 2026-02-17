@@ -11,6 +11,7 @@ Entities are game objects with behavior — things that exist in the world and d
 | `Terminal.js`     | Plug point on a puzzle element. Player presses E near it to connect/disconnect the cord. When powered, calls `linkedElement.activate()`; when unpowered, calls `linkedElement.deactivate()`. |
 | `ExtensionCord.js`| Visual-only — draws a droopy bezier cord from the generator to either the connected terminal or the player. Also provides `isInRange(terminal)` for range checks. |
 | `Spikes.js`       | Hazard zone — a row of procedural spike triangles. Kills the player on overlap. Can be neutralised when a PushBlock covers them (`neutralise()` disables body + fades visual). |
+| `Enemy.js`        | Patrolling hazard — a small enemy that walks left and right between configurable patrol boundaries. Kills the player on touch (same as spikes). Can only be killed by the extension cord plug when the cord is NOT connected to a terminal. Short enough (32×32) for the hero to jump over. |
 
 ## Key Behaviors
 
@@ -40,6 +41,14 @@ Entities are game objects with behavior — things that exist in the world and d
 - `isDangerous` getter — true unless neutralised
 - `neutralise()` — disable body, fade to 30% alpha (called when block covers them)
 - `reactivate()` — re-enable (unused in current levels)
+
+### Enemy
+- **Patrol:** Walks between `rangeLeft` and `rangeRight` at configurable `speed` (default: ENEMY.SPEED = 80 px/s)
+- **Danger:** `isDangerous` getter — true while alive. Player overlap triggers `player.die()`
+- **Kill mechanic:** Can only be killed by the dangling extension cord plug (when cord is NOT connected to a terminal). A hidden plug zone follows the player and checks overlap with enemies
+- **Death:** `kill()` — stops movement, plays shrink+fade tween, destroys sprite
+- **Size:** 32×32 px — short enough for the hero (48×64) to jump over. Jumping ON them does NOT kill them
+- **Level data:** `{ id, x, y, speed?, rangeLeft, rangeRight, direction?, label? }`
 
 ## Conventions
 - Each entity extends `Phaser.Physics.Arcade.Sprite` (except ExtensionCord which is a plain class wrapping Graphics).

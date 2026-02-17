@@ -1,7 +1,7 @@
 # Build Progress
 
 ## Goal
-Build a playable 2D puzzle-platformer for the "Everything is Connected" game jam.
+Build a playable 2D puzzle-platformer called **"Sparky Joe Saves the Day"** for the "Everything is Connected" game jam.
 Hero is an electrician who connects extension cords from generators to terminals to power puzzle elements.
 
 ## Level 1 Design — "First Steps"
@@ -77,15 +77,53 @@ Hero is an electrician who connects extension cords from generators to terminals
 - [x] Fix: Removed duplicate 'ground' texture generation in PreloadScene
 - [x] Fix: Player now explicitly uses frame 0 and plays 'idle' animation on construction
 
+## Menu Redesign — "Sparky Joe Saves the Day"
+- [x] Renamed game title from "Everything Is Connected" to "Sparky Joe Saves the Day"
+- [x] Added `SparkyJoe_clean.png` character image to the main menu (loaded via ES import in PreloadScene)
+- [x] Redesigned MenuScene with big cartoonish title (Arial Black/Impact, bright yellow + cyan, stroke outlines, drop shadows)
+- [x] Character displayed on left side with floating tween animation
+- [x] Buttons restyled with bold colors, stroke outlines, and hover scale effects
+- [x] Title has pulsing scale animation for extra energy
+
+## Enemies & Heavy Blocks
+- [x] Created `src/entities/Enemy.js` — patrolling hazard with kill/death animation, flip-on-wall, plug-attack vulnerability
+- [x] Created `src/entities/HeavyBlock.js` — immovable gravity block with skirt body, top platform, industrial texture
+
+## Tutorial & Level 5
+- [x] Created `src/levels/LevelTutorial.js` — guided walkthrough level with tutorialPopups for every mechanic
+- [x] Created `src/levels/Level05.js` — "Tower Descent" (hard, tall vertical, multiple routes, chained elevators, enemies)
+
+## Sound Effects
+- [x] Added `playElectricZap()` — crackly static + zap SFX for plug connect/disconnect (~0.7s, 6 audio layers)
+- [x] Added `playMetalClang()` — metallic wrench impact SFX for repair animation
+- [x] Added `playElectricBlast()` — punchy zap SFX for enemy kills
+- [x] Added `playPowerUp()` — rising sweep SFX for systems coming online
+- [x] Wired `playElectricZap()` into GameScene connect/disconnect flow
+
+## Sprite Pipeline Tools
+- [x] Created `tools/sprite-converter.html` — browser-based PNG→Phaser JS converter with drag-and-drop
+- [x] Created `tools/png-to-js.cjs` / `tools/png-to-js.js` — CLI PNG→JS sprite converters
+- [x] Created `tools/segment-sprite.cjs` — body part segmenter for puppet animation
+- [x] Created `tools/build-sprite.cjs` — 8-part body rotation spritesheet generator
+- [x] Created `tools/gen-sparky.cjs` — generates SparkySprite.js from sparky_parts.json
+## Victory Effects
+- [x] Added `_illuminateWindows(duration)` to GameScene — on level completion, building windows across backdrop and midground layers light up
+- [x] City backdrop windows (far + near buildings) overlay warm yellow glow at depth -9 with parallax matching (scrollFactor 0.3)
+- [x] Midground building windows overlay warm orange/yellow glow at depth -4, with ambient halos on select windows
+- [x] Both layers fade in with Quad.easeIn easing, slightly delayed behind floodlights (20% offset), then gently pulse once fully lit
+- [x] ~10–20% of windows remain dark for realism
 ## Current State
-- **Build:** ✅ Compiles cleanly (32 modules, Vite v5.4.21)
+- **Build:** ✅ Compiles cleanly (35 modules, Vite v5.4.21)
 - **Physics debug:** OFF (`debug: false` in main.js)
 - **All core mechanics working:** cord, door, block propping, elevator riding, goal detection
-- **Multi-level system:** ✅ 4 levels, data-driven GameScene, LevelRegistry with chaining
-- **Art:** All textures procedurally generated (no external images)
+- **Multi-level system:** ✅ 6 levels (tutorial + 5), data-driven GameScene, LevelRegistry with chaining
+- **Art:** Mostly procedural textures; `SparkyJoe_clean.png` loaded for menu character display
 - **Music:** Web Audio API chiptune — menu loop, level loop, victory fanfare
+- **SFX:** Procedural electric zap (connect/disconnect), metal clang, electric blast, power-up sweep
+- **Enemies:** Patrolling hazards, killable with cord plug attack
 - **Levels 1-2:** Tested and playable
-- **Levels 3-4:** Data files created, not yet play-tested
+- **Levels 3-5:** Data files created, not yet play-tested
+- **Tutorial:** Data file created, guided popup system
 - **Error overlay:** Present in index.html for debugging (remove for release)
 
 ## Architecture Overview
@@ -95,13 +133,15 @@ src/
 ├── config.js            # All constants (dimensions, speeds, physics values)
 ├── assets/
 │   ├── AssetTextures.js # Procedural texture generators
-│   └── ElectricianSprite.js  # 14-frame hero spritesheet builder
+│   ├── SparkySprite.js  # Sparky Joe hero spritesheet builder
+│   ├── SparkyJoe_clean.png  # Character image for menu screen
+│   └── WorkerSprite.js  # Worker reference sprite
 ├── audio/
 │   └── ProceduralMusic.js    # Web Audio API chiptune synthesizer
 ├── scenes/
 │   ├── BootScene.js     # → PreloadScene
 │   ├── PreloadScene.js  # Generates textures, registers animations
-│   ├── MenuScene.js     # Title screen with city backdrop + music
+│   ├── MenuScene.js     # Title screen with level select, city backdrop + music
 │   ├── GameScene.js     # Data-driven level builder + gameplay
 │   └── UIScene.js       # HUD overlay (cord status)
 ├── entities/
@@ -118,11 +158,12 @@ src/
 │   ├── PuzzleElement.js # Base class (activate/deactivate interface)
 │   └── Trigger.js       # Trigger base class
 ├── levels/
-│   ├── LevelRegistry.js # Level list + lookup helpers
+│   ├── LevelRegistry.js # Level list + lookup helpers (getAllLevels for level select)
 │   ├── Level01.js       # "First Steps" — intro
 │   ├── Level02.js       # "Bridge the Gap" — drawbridge + spikes
-│   ├── Level03.js       # "Power Cascade" — trigger zones + cascading
-│   └── Level04.js       # "Tower Descent" — vertical, multi-route, hard
+│   ├── Level03.js       # "Dead Weight" — trigger zones + cascading
+│   ├── Level04.js       # "Power Climb" — vertical, multi-route, hard
+│   └── Level05.js       # "Tower Descent" — tall vertical descent
 ├── systems/
 │   ├── ConnectionSystem.js  # Connection propagation
 │   ├── PuzzleManager.js     # Element factory + registry

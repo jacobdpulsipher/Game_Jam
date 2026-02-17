@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite → Phaser JS Converter</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1e1e2e; color: #cdd6f4;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  h1 { text-align: center; padding: 20px; color: #89b4fa; font-size: 1.5rem; }
+  .container { display: flex; gap: 20px; padding: 0 20px 20px; flex: 1; }
+  .panel { flex: 1; display: flex; flex-direction: column; }
+  .panel h2 { font-size: 1rem; margin-bottom: 10px; color: #a6adc8; }
+
+  /* Drop zone */
+  #dropZone {
+    border: 3px dashed #585b70; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px;
+    min-height: 300px; cursor: pointer; transition: all 0.2s;
+    background: #181825; position: relative;
+  }
+  #dropZone.hover { border-color: #89b4fa; background: #1e1e3a; }
+  #dropZone.has-image { border-color: #a6e3a1; }
+  #dropZone p { color: #6c7086; font-size: 1.1rem; }
+  #dropZone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+
+  /* Preview */
+  #preview { image-rendering: pixelated; max-width: 100%; background: repeating-conic-gradient(#313244 0% 25%, #45475a 0% 50%) 0 0 / 16px 16px; }
+  #previewWrap { text-align: center; margin: 10px 0; }
+
+  /* Settings */
+  .settings { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; align-items: center; }
+  .settings label { color: #a6adc8; font-size: 0.85rem; }
+  .settings input, .settings select {
+    background: #313244; border: 1px solid #585b70; color: #cdd6f4;
+    padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;
+  }
+  .settings input[type=number] { width: 60px; }
+
+  /* Buttons */
+  .btn {
+    background: #89b4fa; color: #1e1e2e; border: none; padding: 10px 24px;
+    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #74c7ec; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 10px; margin: 10px 0; }
+  .btn.secondary { background: #a6e3a1; }
+
+  /* Output */
+  #output {
+    flex: 1; background: #181825; border: 1px solid #585b70; border-radius: 8px;
+    padding: 12px; font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.75rem; line-height: 1.4; overflow: auto; white-space: pre;
+    color: #a6adc8; min-height: 300px; resize: vertical;
+  }
+
+  /* Stats */
+  #stats { font-size: 0.8rem; color: #6c7086; margin: 6px 0; }
+
+  /* Pixel grid canvas for verification */
+  #gridCanvas {
+    image-rendering: pixelated; max-width: 100%;
+    background: repeating-conic-gradient(#313244 0% 25%, #45475a 0% 50%) 0 0 / 16px 16px;
+  }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; margin-bottom: 10px; }
+  .tab {
+    padding: 6px 16px; background: #313244; color: #6c7086; border: none;
+    cursor: pointer; font-size: 0.85rem; border-radius: 6px 6px 0 0;
+  }
+  .tab.active { background: #181825; color: #cdd6f4; }
+</style>
+</head>
+<body>
+
+<h1>🎮 Sprite → Phaser 3 Procedural JS Converter</h1>
+
+<div class="container">
+  <!-- LEFT PANEL: Input -->
+  <div class="panel">
+    <h2>1. Drop your sprite PNG</h2>
+    <div id="dropZone">
+      <p>📁 Drag & drop PNG here, or click to browse</p>
+      <input type="file" id="fileInput" accept="image/png,image/gif,image/jpeg,image/webp">
+    </div>
+
+    <div id="previewWrap" style="display:none">
+      <canvas id="preview"></canvas>
+    </div>
+    <div id="stats"></div>
+
+    <h2 style="margin-top:16px">2. Settings</h2>
+    <div class="settings">
+      <label>Texture key:
+        <input type="text" id="textureKey" value="worker" placeholder="worker">
+      </label>
+      <label>Function name:
+        <input type="text" id="funcName" value="generateWorkerSprite" placeholder="generateWorkerSprite">
+      </label>
+      <label>Alpha threshold:
+        <input type="number" id="alphaThreshold" value="10" min="0" max="255" title="Pixels with alpha below this are treated as transparent">
+      </label>
+      <label>
+        <input type="checkbox" id="mergeRows" checked> Merge adjacent pixels (row-wise)
+      </label>
+      <label>
+        <input type="checkbox" id="extractPalette" checked> Extract named palette
+      </label>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="convertBtn" disabled>Convert →</button>
+      <button class="btn secondary" id="copyBtn" disabled>📋 Copy JS</button>
+    </div>
+
+    <h2 style="margin-top:16px">3. Verification (re-rendered from JS data)</h2>
+    <canvas id="gridCanvas"></canvas>
+  </div>
+
+  <!-- RIGHT PANEL: Output -->
+  <div class="panel">
+    <h2>Generated JS Code</h2>
+    <div class="tabs">
+      <button class="tab active" data-tab="code">Code</button>
+      <button class="tab" data-tab="palette">Palette</button>
+      <button class="tab" data-tab="rawdata">Raw Data</button>
+    </div>
+    <pre id="output">Drop a sprite image to get started...</pre>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════
+let imgData = null;   // ImageData from canvas
+let imgWidth = 0;
+let imgHeight = 0;
+let pixelGrid = [];   // 2D array of {r,g,b,a} or null (transparent)
+let generatedCode = '';
+
+// ═══════════════════════════════════════════════════════════════
+// DOM refs
+// ═══════════════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewWrap = document.getElementById('previewWrap');
+const stats = document.getElementById('stats');
+const convertBtn = document.getElementById('convertBtn');
+const copyBtn = document.getElementById('copyBtn');
+const output = document.getElementById('output');
+const gridCanvas = document.getElementById('gridCanvas');
+
+// ═══════════════════════════════════════════════════════════════
+// File loading
+// ═══════════════════════════════════════════════════════════════
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('hover');
+  if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => processImage(img);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function processImage(img) {
+  imgWidth = img.naturalWidth;
+  imgHeight = img.naturalHeight;
+
+  // Draw to preview canvas at native size
+  preview.width = imgWidth;
+  preview.height = imgHeight;
+  preview.style.width = Math.max(imgWidth * 2, 200) + 'px';
+  const ctx = preview.getContext('2d');
+  ctx.clearRect(0, 0, imgWidth, imgHeight);
+  ctx.drawImage(img, 0, 0);
+
+  imgData = ctx.getImageData(0, 0, imgWidth, imgHeight);
+  previewWrap.style.display = 'block';
+  dropZone.classList.add('has-image');
+
+  stats.textContent = `Image: ${imgWidth}×${imgHeight}px | ${countColors()} unique colors`;
+
+  convertBtn.disabled = false;
+  // Auto-convert
+  doConvert();
+}
+
+function countColors() {
+  const set = new Set();
+  const d = imgData.data;
+  const threshold = parseInt(document.getElementById('alphaThreshold').value) || 10;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i+3] < threshold) continue;
+    set.add(`${d[i]},${d[i+1]},${d[i+2]}`);
+  }
+  return set.size;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Conversion
+// ═══════════════════════════════════════════════════════════════
+convertBtn.addEventListener('click', doConvert);
+
+function doConvert() {
+  if (!imgData) return;
+
+  const threshold = parseInt(document.getElementById('alphaThreshold').value) || 10;
+  const merge = document.getElementById('mergeRows').checked;
+  const usePalette = document.getElementById('extractPalette').checked;
+  const texKey = document.getElementById('textureKey').value || 'worker';
+  const fnName = document.getElementById('funcName').value || 'generateWorkerSprite';
+
+  // Build pixel grid
+  pixelGrid = [];
+  const d = imgData.data;
+  for (let y = 0; y < imgHeight; y++) {
+    const row = [];
+    for (let x = 0; x < imgWidth; x++) {
+      const i = (y * imgWidth + x) * 4;
+      if (d[i+3] < threshold) {
+        row.push(null);
+      } else {
+        row.push({ r: d[i], g: d[i+1], b: d[i+2], a: d[i+3] });
+      }
+    }
+    pixelGrid.push(row);
+  }
+
+  // Extract palette
+  const colorMap = new Map(); // hex -> count
+  for (let y = 0; y < imgHeight; y++) {
+    for (let x = 0; x < imgWidth; x++) {
+      const px = pixelGrid[y][x];
+      if (!px) continue;
+      const hex = rgbToHex(px.r, px.g, px.b);
+      colorMap.set(hex, (colorMap.get(hex) || 0) + 1);
+    }
+  }
+
+  // Sort palette by frequency
+  const sortedColors = [...colorMap.entries()].sort((a, b) => b[1] - a[1]);
+
+  // Generate palette names
+  const palNames = {};
+  sortedColors.forEach(([hex, count], i) => {
+    palNames[hex] = usePalette ? `c${i}` : null;
+  });
+
+  // Build draw commands (merge horizontally if enabled)
+  const commands = []; // { hex, x, y, w, h }
+  for (let y = 0; y < imgHeight; y++) {
+    let x = 0;
+    while (x < imgWidth) {
+      const px = pixelGrid[y][x];
+      if (!px) { x++; continue; }
+
+      const hex = rgbToHex(px.r, px.g, px.b);
+      let runLen = 1;
+      if (merge) {
+        while (x + runLen < imgWidth) {
+          const next = pixelGrid[y][x + runLen];
+          if (!next) break;
+          if (rgbToHex(next.r, next.g, next.b) !== hex) break;
+          runLen++;
+        }
+      }
+      commands.push({ hex, x, y, w: runLen, h: 1 });
+      x += runLen;
+    }
+  }
+
+  // Further merge vertically: if two commands have same hex, x, w and adjacent y
+  if (merge) {
+    mergeVertically(commands);
+  }
+
+  // Generate code
+  generatedCode = generateJS(commands, sortedColors, palNames, texKey, fnName, usePalette);
+  output.textContent = generatedCode;
+  copyBtn.disabled = false;
+
+  stats.textContent = `Image: ${imgWidth}×${imgHeight}px | ${sortedColors.length} colors | ${commands.length} fillRect calls`;
+
+  // Render verification
+  renderVerification(commands);
+}
+
+function mergeVertically(commands) {
+  // Index commands by (hex, x, w) for fast lookup
+  const map = new Map(); // "hex,x,w" -> [commands sorted by y]
+  for (const cmd of commands) {
+    const key = `${cmd.hex},${cmd.x},${cmd.w}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(cmd);
+  }
+
+  const toRemove = new Set();
+  for (const [, group] of map) {
+    group.sort((a, b) => a.y - b.y);
+    for (let i = 0; i < group.length - 1; i++) {
+      const cur = group[i];
+      if (toRemove.has(cur)) continue;
+      let j = i + 1;
+      while (j < group.length) {
+        const next = group[j];
+        if (toRemove.has(next)) { j++; continue; }
+        if (next.y === cur.y + cur.h) {
+          cur.h += next.h;
+          toRemove.add(next);
+          j++;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  // Remove merged commands
+  for (let i = commands.length - 1; i >= 0; i--) {
+    if (toRemove.has(commands[i])) commands.splice(i, 1);
+  }
+}
+
+function generateJS(commands, sortedColors, palNames, texKey, fnName, usePalette) {
+  let js = '';
+
+  js += `/**\n`;
+  js += ` * WorkerSprite.js\n`;
+  js += ` *\n`;
+  js += ` * Auto-generated from PNG sprite.\n`;
+  js += ` * ${imgWidth}×${imgHeight} pixels, ${sortedColors.length} colors, ${commands.length} draw calls.\n`;
+  js += ` */\n\n`;
+
+  // Palette
+  if (usePalette) {
+    js += `// ── Palette (${sortedColors.length} colors, sorted by frequency) ──\n`;
+    js += `const PAL = {\n`;
+    sortedColors.forEach(([hex, count], i) => {
+      js += `  c${i}: 0x${hex},  // used ${count}×\n`;
+    });
+    js += `};\n\n`;
+  }
+
+  js += `const W = ${imgWidth};\n`;
+  js += `const H = ${imgHeight};\n\n`;
+
+  js += `/**\n`;
+  js += ` * Generates the '${texKey}' texture procedurally.\n`;
+  js += ` * @param {Phaser.Scene} scene\n`;
+  js += ` * @returns {{ textureKey: string, width: number, height: number }}\n`;
+  js += ` */\n`;
+  js += `export function ${fnName}(scene) {\n`;
+  js += `  if (scene.textures.exists('${texKey}')) {\n`;
+  js += `    return { textureKey: '${texKey}', width: W, height: H };\n`;
+  js += `  }\n\n`;
+  js += `  const g = scene.make.graphics({ x: 0, y: 0, add: false });\n\n`;
+
+  // Group commands by color for fewer fillStyle calls
+  let lastHex = null;
+  for (const cmd of commands) {
+    if (cmd.hex !== lastHex) {
+      if (usePalette) {
+        js += `  g.fillStyle(PAL.${palNames[cmd.hex]}, 1);\n`;
+      } else {
+        js += `  g.fillStyle(0x${cmd.hex}, 1);\n`;
+      }
+      lastHex = cmd.hex;
+    }
+    js += `  g.fillRect(${cmd.x}, ${cmd.y}, ${cmd.w}, ${cmd.h});\n`;
+  }
+
+  js += `\n  g.generateTexture('${texKey}', W, H);\n`;
+  js += `  g.destroy();\n\n`;
+  js += `  return { textureKey: '${texKey}', width: W, height: H };\n`;
+  js += `}\n`;
+
+  return js;
+}
+
+// Sort commands by color to minimize fillStyle switches
+convertBtn.addEventListener('click', doConvert);
+
+// ═══════════════════════════════════════════════════════════════
+// Verification rendering
+// ═══════════════════════════════════════════════════════════════
+function renderVerification(commands) {
+  const scale = Math.max(2, Math.floor(400 / Math.max(imgWidth, imgHeight)));
+  gridCanvas.width = imgWidth * scale;
+  gridCanvas.height = imgHeight * scale;
+  gridCanvas.style.width = gridCanvas.width + 'px';
+  const ctx = gridCanvas.getContext('2d');
+  ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+
+  for (const cmd of commands) {
+    ctx.fillStyle = '#' + cmd.hex;
+    ctx.fillRect(cmd.x * scale, cmd.y * scale, cmd.w * scale, cmd.h * scale);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Utilities
+// ═══════════════════════════════════════════════════════════════
+function rgbToHex(r, g, b) {
+  return ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+// Copy button
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(generatedCode).then(() => {
+    copyBtn.textContent = '✅ Copied!';
+    setTimeout(() => { copyBtn.textContent = '📋 Copy JS'; }, 2000);
+  });
+});
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    // For now just show code tab content
+  });
+});
+
+// Re-convert on settings change
+document.querySelectorAll('.settings input, .settings select').forEach(el => {
+  el.addEventListener('change', () => { if (imgData) doConvert(); });
+});
+</script>
+
+</body>
+</html>
