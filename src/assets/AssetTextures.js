@@ -425,6 +425,459 @@ export function generatePlug(scene) {
 }
 
 /**
+ * Generate a commercial dumpster viewed from the side, usable as a platform.
+ * Dark green metal body with rim, reinforcement ridges, wheels, handles, and rust.
+ *
+ * @param {Phaser.Scene} scene  - The Phaser scene
+ * @param {number} width  - Platform width in pixels
+ * @param {number} height - Platform height in pixels
+ * @returns {string} Texture key
+ */
+export function generateDumpsterPlatform(scene, width, height) {
+  const key = `dumpster_plat_${width}x${height}`;
+  if (scene.textures.exists(key)) return key;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  const rimH = 3;
+  const wheelR = Math.max(2, Math.floor(height * 0.08));
+  const bodyTop = rimH;
+  const bodyBot = height - wheelR * 2 - 1;
+  const bodyH = bodyBot - bodyTop;
+  const halfH = Math.floor(bodyH / 2);
+
+  // --- Main body upper half ---
+  g.fillStyle(0x2a5a2a, 1);
+  g.fillRect(1, bodyTop, width - 2, bodyH);
+
+  // --- Darker bottom half ---
+  g.fillStyle(0x1e4e1e, 0.5);
+  g.fillRect(1, bodyTop + halfH, width - 2, bodyH - halfH);
+
+  // --- Top metal rim (walkable surface) ---
+  g.fillStyle(0x4a6a4a, 1);
+  g.fillRect(0, 0, width, rimH);
+  // Rim highlight
+  g.fillStyle(0x6a8a6a, 0.5);
+  g.fillRect(0, 0, width, 1);
+  // Rim shadow
+  g.fillStyle(0x1a3a1a, 0.6);
+  g.fillRect(0, rimH - 1, width, 1);
+
+  // --- Vertical reinforcement ridges at 30% and 70% ---
+  const ridgeW = Math.max(2, Math.floor(width * 0.04));
+  const ridge1X = Math.floor(width * 0.3);
+  const ridge2X = Math.floor(width * 0.7) - ridgeW;
+  const ridgeTop = bodyTop + rimH;
+  const ridgeH = Math.max(1, bodyBot - ridgeTop - 1);
+
+  g.fillStyle(0x326432, 0.8);
+  g.fillRect(ridge1X, ridgeTop, ridgeW, ridgeH);
+  g.fillRect(ridge2X, ridgeTop, ridgeW, ridgeH);
+  g.lineStyle(0.5, 0x1a4a1a, 0.6);
+  g.strokeRect(ridge1X, ridgeTop, ridgeW, ridgeH);
+  g.strokeRect(ridge2X, ridgeTop, ridgeW, ridgeH);
+
+  // --- Rust spots ---
+  g.fillStyle(0x7a4d28, 0.3);
+  g.fillRect(Math.floor(width * 0.08), bodyTop + 4, Math.max(3, Math.floor(width * 0.06)), 2);
+  g.fillStyle(0x6e4422, 0.25);
+  g.fillRect(width - Math.floor(width * 0.2), bodyBot - 5, Math.max(3, Math.floor(width * 0.07)), 3);
+  g.fillStyle(0x7a4d28, 0.2);
+  g.fillRect(Math.floor(width * 0.55), bodyTop + 6, 3, 2);
+
+  // --- Side handles ---
+  const handleY = bodyTop + Math.floor(bodyH * 0.4);
+  const handleW = Math.max(2, Math.floor(width * 0.05));
+  const handleH = Math.max(2, Math.floor(height * 0.08));
+
+  g.fillStyle(0x4a4a4a, 1);
+  g.fillRect(0, handleY, handleW, handleH);
+  g.fillRect(width - handleW, handleY, handleW, handleH);
+  g.lineStyle(0.5, 0x666666, 0.7);
+  g.strokeRect(0, handleY, handleW, handleH);
+  g.strokeRect(width - handleW, handleY, handleW, handleH);
+
+  // --- Bottom edge ---
+  g.fillStyle(0x1a3a1a, 1);
+  g.fillRect(1, bodyBot, width - 2, 1);
+
+  // --- Wheels ---
+  const wheelY = height - wheelR - 1;
+  const w1X = Math.floor(width * 0.2);
+  const w2X = Math.floor(width * 0.8);
+
+  g.fillStyle(0x111111, 0.4);
+  g.fillCircle(w1X + 0.5, wheelY + 0.5, wheelR);
+  g.fillCircle(w2X + 0.5, wheelY + 0.5, wheelR);
+  g.fillStyle(0x222222, 1);
+  g.fillCircle(w1X, wheelY, wheelR);
+  g.fillCircle(w2X, wheelY, wheelR);
+  g.lineStyle(0.5, 0x444444, 0.6);
+  g.strokeCircle(w1X, wheelY, wheelR);
+  g.strokeCircle(w2X, wheelY, wheelR);
+  g.fillStyle(0x555555, 1);
+  g.fillCircle(w1X, wheelY, 0.8);
+  g.fillCircle(w2X, wheelY, 0.8);
+
+  // --- Dark outline ---
+  g.lineStyle(1, 0x1a2a1a, 1);
+  g.strokeRect(0, 0, width, bodyBot + 1);
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+  return key;
+}
+
+/**
+ * Generate a brick chimney stack that can be jumped on top of.
+ * Red/brown bricks with mortar lines, a lighter cap, and soot stains.
+ *
+ * @param {Phaser.Scene} scene  - The Phaser scene
+ * @param {number} width  - Platform width in pixels
+ * @param {number} height - Platform height in pixels
+ * @returns {string} Texture key
+ */
+export function generateChimneyPlatform(scene, width, height) {
+  const key = `chimney_plat_${width}x${height}`;
+  if (scene.textures.exists(key)) return key;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  const capH = 3;
+  const brickW = 8;
+  const brickH = 4;
+  const mortarColor = 0x5a2218;
+  const mortarSize = 1;
+
+  // --- Mortar background (fills gaps) ---
+  g.fillStyle(mortarColor, 1);
+  g.fillRect(0, capH, width, height - capH);
+
+  // --- Brick pattern ---
+  let row = 0;
+  for (let y = capH; y < height; y += brickH + mortarSize) {
+    const offset = (row % 2 === 0) ? 0 : Math.floor(brickW / 2);
+    for (let x = -offset; x < width; x += brickW + mortarSize) {
+      const bx = Math.max(0, x);
+      const bw = Math.min(brickW, width - bx);
+      if (x < 0) {
+        // Partial brick at left when offset
+        const partial = brickW + x;
+        if (partial > 0) {
+          // Slight color variation per brick
+          const variation = ((row * 7 + Math.floor(x / brickW) * 13) % 3);
+          const colors = [0x8b3a2a, 0x7e3526, 0x94402e];
+          g.fillStyle(colors[variation], 1);
+          g.fillRect(0, y, partial, Math.min(brickH, height - y));
+        }
+      }
+      if (bw > 0 && bx < width) {
+        const variation = ((row * 7 + Math.floor(bx / brickW) * 13) % 3);
+        const colors = [0x8b3a2a, 0x7e3526, 0x94402e];
+        g.fillStyle(colors[variation], 1);
+        g.fillRect(bx, y, Math.min(bw, width - bx), Math.min(brickH, height - y));
+      }
+    }
+    row++;
+  }
+
+  // --- Darker edges on left/right ---
+  g.fillStyle(0x3a1a10, 0.35);
+  g.fillRect(0, capH, 2, height - capH);
+  g.fillRect(width - 2, capH, 2, height - capH);
+
+  // --- Top cap (walkable surface) ---
+  g.fillStyle(0x9a4a3a, 1);
+  g.fillRect(0, 0, width, capH);
+  // Cap highlight
+  g.fillStyle(0xaa5a4a, 0.5);
+  g.fillRect(0, 0, width, 1);
+  // Cap shadow
+  g.fillStyle(0x6a2a1a, 0.5);
+  g.fillRect(0, capH - 1, width, 1);
+
+  // --- Soot stains on inside top ---
+  const sootW = Math.max(8, Math.floor(width * 0.5));
+  const sootX = Math.floor((width - sootW) / 2);
+  g.fillStyle(0x222222, 0.3);
+  g.fillRect(sootX, capH, sootW, Math.min(4, height - capH));
+  g.fillStyle(0x222222, 0.15);
+  g.fillRect(sootX + 2, capH + 2, sootW - 4, Math.min(3, height - capH - 2));
+
+  // --- Outline ---
+  g.lineStyle(1, 0x3a1a10, 0.8);
+  g.strokeRect(0, 0, width, height);
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+  return key;
+}
+
+/**
+ * Generate a rooftop HVAC / AC unit that can be jumped on.
+ * Boxy gray-blue metal housing with ventilation slats, mounting bolts,
+ * an exhaust fan circle, and a panel seam.
+ *
+ * @param {Phaser.Scene} scene  - The Phaser scene
+ * @param {number} width  - Platform width in pixels
+ * @param {number} height - Platform height in pixels
+ * @returns {string} Texture key
+ */
+export function generateACUnitPlatform(scene, width, height) {
+  const key = `ac_plat_${width}x${height}`;
+  if (scene.textures.exists(key)) return key;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  const topH = 3;
+  const boltR = 1.5;
+  const boltInset = 4;
+
+  // --- Body ---
+  g.fillStyle(0x4a5565, 1);
+  g.fillRect(0, topH, width, height - topH);
+
+  // --- Top surface (lighter metallic) ---
+  g.fillStyle(0x5a6575, 1);
+  g.fillRect(0, 0, width, topH);
+  // Top edge highlight
+  g.fillStyle(0x6a7585, 0.5);
+  g.fillRect(0, 0, width, 1);
+
+  // --- Horizontal ventilation slats ---
+  const slatStart = topH + 3;
+  const slatEnd = height - 3;
+  g.lineStyle(1, 0x3a4555, 0.8);
+  for (let y = slatStart; y < slatEnd; y += 3) {
+    g.lineBetween(2, y, width - 2, y);
+  }
+
+  // --- Panel seam line down the middle ---
+  const midX = Math.floor(width / 2);
+  g.lineStyle(1, 0x3a4050, 0.7);
+  g.lineBetween(midX, topH + 1, midX, height - 1);
+
+  // --- Exhaust fan circle on right side ---
+  const fanR = Math.min(Math.floor(height * 0.25), Math.floor(width * 0.12));
+  const fanCX = Math.floor(width * 0.78);
+  const fanCY = Math.floor((topH + height) / 2);
+
+  if (fanR >= 3) {
+    // Fan housing
+    g.fillStyle(0x2a3545, 1);
+    g.fillCircle(fanCX, fanCY, fanR);
+    g.lineStyle(0.5, 0x3a4555, 0.8);
+    g.strokeCircle(fanCX, fanCY, fanR);
+    // Grid lines inside fan (cross)
+    g.lineStyle(0.5, 0x4a5565, 0.6);
+    g.lineBetween(fanCX - fanR + 1, fanCY, fanCX + fanR - 1, fanCY);
+    g.lineBetween(fanCX, fanCY - fanR + 1, fanCX, fanCY + fanR - 1);
+    // Diagonal grid
+    const d = Math.floor(fanR * 0.7);
+    g.lineBetween(fanCX - d, fanCY - d, fanCX + d, fanCY + d);
+    g.lineBetween(fanCX + d, fanCY - d, fanCX - d, fanCY + d);
+    // Center hub
+    g.fillStyle(0x3a4555, 1);
+    g.fillCircle(fanCX, fanCY, Math.max(1, Math.floor(fanR * 0.25)));
+  }
+
+  // --- Corner mounting bolts ---
+  g.fillStyle(0x6a7a8a, 1);
+  g.fillCircle(boltInset, boltInset, boltR);
+  g.fillCircle(width - boltInset, boltInset, boltR);
+  g.fillCircle(boltInset, height - boltInset, boltR);
+  g.fillCircle(width - boltInset, height - boltInset, boltR);
+  // Bolt highlights
+  g.fillStyle(0x8a9aaa, 0.6);
+  g.fillCircle(boltInset - 0.3, boltInset - 0.3, 0.6);
+  g.fillCircle(width - boltInset - 0.3, boltInset - 0.3, 0.6);
+  g.fillCircle(boltInset - 0.3, height - boltInset - 0.3, 0.6);
+  g.fillCircle(width - boltInset - 0.3, height - boltInset - 0.3, 0.6);
+
+  // --- Industrial border ---
+  g.lineStyle(1, 0x3a4050, 1);
+  g.strokeRect(0, 0, width, height);
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+  return key;
+}
+
+/**
+ * Generate a metal ventilation box / duct that can be stood on.
+ * Galvanized silver-gray body with diamond-plate texture on top,
+ * rivets along edges, a side seam, and metallic highlights.
+ *
+ * @param {Phaser.Scene} scene  - The Phaser scene
+ * @param {number} width  - Platform width in pixels
+ * @param {number} height - Platform height in pixels
+ * @returns {string} Texture key
+ */
+export function generateVentBoxPlatform(scene, width, height) {
+  const key = `vent_plat_${width}x${height}`;
+  if (scene.textures.exists(key)) return key;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  const topH = Math.max(3, Math.floor(height * 0.25));
+  const halfY = Math.floor(height * 0.5);
+
+  // --- Body upper half ---
+  g.fillStyle(0x6a7080, 1);
+  g.fillRect(0, 0, width, height);
+
+  // --- Slightly darker bottom half ---
+  g.fillStyle(0x5a6070, 0.5);
+  g.fillRect(0, halfY, width, height - halfY);
+
+  // --- Top panel with diamond-plate pattern ---
+  g.fillStyle(0x7a8090, 0.5);
+  g.fillRect(0, 0, width, topH);
+
+  // Diamond-plate: crossed diagonal lines on top panel
+  g.lineStyle(0.5, 0x8a90a0, 0.35);
+  const spacing = 4;
+  for (let x = -topH; x < width + topH; x += spacing) {
+    // Forward diagonals
+    g.lineBetween(x, 0, x + topH, topH);
+    // Backward diagonals
+    g.lineBetween(x + topH, 0, x, topH);
+  }
+
+  // --- Metallic highlight on top edge ---
+  g.fillStyle(0x9aa0b0, 0.5);
+  g.fillRect(0, 0, width, 1);
+
+  // --- Side seam line ---
+  const seamY = Math.floor(height * 0.45);
+  g.lineStyle(1, 0x5a6070, 0.7);
+  g.lineBetween(1, seamY, width - 1, seamY);
+
+  // --- Rivets along edges (every ~10px) ---
+  const rivetR = 1;
+  g.fillStyle(0x8a90a0, 1);
+  for (let x = 5; x < width - 2; x += 10) {
+    // Top row
+    g.fillCircle(x, topH + 1, rivetR);
+    // Bottom row
+    g.fillCircle(x, height - 2, rivetR);
+  }
+  // Left/right edge rivets
+  for (let y = topH + 5; y < height - 2; y += 10) {
+    g.fillCircle(2, y, rivetR);
+    g.fillCircle(width - 2, y, rivetR);
+  }
+  // Rivet highlights
+  g.fillStyle(0xaab0c0, 0.5);
+  for (let x = 5; x < width - 2; x += 10) {
+    g.fillCircle(x - 0.3, topH + 0.7, 0.4);
+    g.fillCircle(x - 0.3, height - 2.3, 0.4);
+  }
+
+  // --- Border ---
+  g.lineStyle(1, 0x4a5060, 1);
+  g.strokeRect(0, 0, width, height);
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+  return key;
+}
+
+/**
+ * Generate a wooden shipping crate / pallet that can be jumped on.
+ * Wood planks with cross braces, corner metal brackets, nails,
+ * subtle grain, and stenciled shipping marks.
+ *
+ * @param {Phaser.Scene} scene  - The Phaser scene
+ * @param {number} width  - Platform width in pixels
+ * @param {number} height - Platform height in pixels
+ * @returns {string} Texture key
+ */
+export function generateCratePlatform(scene, width, height) {
+  const key = `crate_plat_${width}x${height}`;
+  if (scene.textures.exists(key)) return key;
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+  const bracketSize = Math.max(3, Math.floor(Math.min(width, height) * 0.12));
+
+  // --- Wood base ---
+  g.fillStyle(0x6a5020, 1);
+  g.fillRect(0, 0, width, height);
+
+  // --- Horizontal plank lines ---
+  const plankSpacing = Math.max(4, Math.floor(height / 5));
+  g.lineStyle(1, 0x52400a, 0.6);
+  for (let y = plankSpacing; y < height; y += plankSpacing) {
+    g.lineBetween(0, y, width, y);
+  }
+
+  // --- Wood grain (vertical lines at low alpha) ---
+  g.lineStyle(0.5, 0x584818, 0.2);
+  for (let x = 5; x < width; x += 6) {
+    g.lineBetween(x, 1, x, height - 1);
+  }
+
+  // --- Cross braces on front face (X) ---
+  g.lineStyle(1.5, 0x584818, 0.6);
+  g.lineBetween(bracketSize, bracketSize, width - bracketSize, height - bracketSize);
+  g.lineBetween(width - bracketSize, bracketSize, bracketSize, height - bracketSize);
+
+  // --- Corner metal brackets ---
+  g.fillStyle(0x555555, 1);
+  // Top-left
+  g.fillRect(0, 0, bracketSize, bracketSize);
+  // Top-right
+  g.fillRect(width - bracketSize, 0, bracketSize, bracketSize);
+  // Bottom-left
+  g.fillRect(0, height - bracketSize, bracketSize, bracketSize);
+  // Bottom-right
+  g.fillRect(width - bracketSize, height - bracketSize, bracketSize, bracketSize);
+
+  // Bracket borders
+  g.lineStyle(0.5, 0x3a3a3a, 0.8);
+  g.strokeRect(0, 0, bracketSize, bracketSize);
+  g.strokeRect(width - bracketSize, 0, bracketSize, bracketSize);
+  g.strokeRect(0, height - bracketSize, bracketSize, bracketSize);
+  g.strokeRect(width - bracketSize, height - bracketSize, bracketSize, bracketSize);
+
+  // --- Nails at bracket corners ---
+  const nailR = 0.8;
+  const nailInset = Math.max(1.5, Math.floor(bracketSize * 0.35));
+  g.fillStyle(0x333333, 1);
+  // Top-left bracket nails
+  g.fillCircle(nailInset, nailInset, nailR);
+  g.fillCircle(bracketSize - nailInset + 1, nailInset, nailR);
+  g.fillCircle(nailInset, bracketSize - nailInset + 1, nailR);
+  // Top-right bracket nails
+  g.fillCircle(width - nailInset, nailInset, nailR);
+  g.fillCircle(width - bracketSize + nailInset - 1, nailInset, nailR);
+  g.fillCircle(width - nailInset, bracketSize - nailInset + 1, nailR);
+  // Bottom-left bracket nails
+  g.fillCircle(nailInset, height - nailInset, nailR);
+  g.fillCircle(bracketSize - nailInset + 1, height - nailInset, nailR);
+  g.fillCircle(nailInset, height - bracketSize + nailInset - 1, nailR);
+  // Bottom-right bracket nails
+  g.fillCircle(width - nailInset, height - nailInset, nailR);
+  g.fillCircle(width - bracketSize + nailInset - 1, height - nailInset, nailR);
+  g.fillCircle(width - nailInset, height - bracketSize + nailInset - 1, nailR);
+
+  // --- Stenciled shipping marks (small solid rectangles to suggest text) ---
+  const markColor = 0x3a3010;
+  const markAlpha = 0.4;
+  const markY = Math.floor(height * 0.35);
+  const markX = Math.floor(width * 0.3);
+  g.fillStyle(markColor, markAlpha);
+  g.fillRect(markX, markY, Math.floor(width * 0.1), 2);
+  g.fillRect(markX + Math.floor(width * 0.13), markY, Math.floor(width * 0.15), 2);
+  g.fillRect(markX, markY + 4, Math.floor(width * 0.22), 2);
+
+  // --- Border ---
+  g.lineStyle(1, 0x3a2a0a, 1);
+  g.strokeRect(0, 0, width, height);
+
+  g.generateTexture(key, width, height);
+  g.destroy();
+  return key;
+}
+
+/**
  * Initialize all asset textures for a scene.
  * Call this once during PreloadScene or GameScene creation.
  * @param {Phaser.Scene} scene - The Phaser scene
@@ -453,6 +906,18 @@ export function initializeAssetTextures(scene) {
   
   // Generate plug
   generatePlug(scene);
+
+  // Generate platform objects
+  generateDumpsterPlatform(scene, 64, 32);
+  generateDumpsterPlatform(scene, 80, 24);
+  generateChimneyPlatform(scene, 48, 48);
+  generateChimneyPlatform(scene, 32, 40);
+  generateACUnitPlatform(scene, 64, 24);
+  generateACUnitPlatform(scene, 48, 20);
+  generateVentBoxPlatform(scene, 48, 16);
+  generateVentBoxPlatform(scene, 64, 20);
+  generateCratePlatform(scene, 48, 32);
+  generateCratePlatform(scene, 64, 24);
 }
 
 export default {
@@ -462,5 +927,10 @@ export default {
   generateWoodenCrate,
   generateOutlet,
   generatePlug,
+  generateDumpsterPlatform,
+  generateChimneyPlatform,
+  generateACUnitPlatform,
+  generateVentBoxPlatform,
+  generateCratePlatform,
   initializeAssetTextures,
 };

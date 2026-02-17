@@ -1,294 +1,428 @@
 import { GAME_HEIGHT, DOOR, ELEVATOR, DRAWBRIDGE, ENEMY, PUSH_BLOCK } from '../config.js';
 
 /**
- * Tutorial Level — "Learning the Ropes"
- *
- * A guided walkthrough that teaches the player every core mechanic
- * via popup dialogue triggered by walking near each obstacle.
- *
- * Layout (left → right):
- *
- *   [G1] [Player]  |wall|  [Block] [T1+Door]  [T2]--drawbridge--  [T3+Elev]
- *                                                    (gap)            ↑
- *   Floor ══════════════════════════════════════════════════════     Upper ═══════[G2 ★]
- *                                                                    [Enemy]
- *
- * Mechanics taught (in order):
- *   1. Movement (A/D / Arrow Keys)
- *   2. Jumping (Space / W) — jump over small wall
- *   3. Push Blocks (F) — grab and push a block
- *   4. Terminal + Door + Block Prop — plug cord to open door, push block
- *      under door to prop it, unplug cord, walk through propped gap
- *   5. Drawbridge — plug cord into terminal to bridge a gap
- *   6. Elevator — plug cord into terminal, ride up
- *   7. Enemies — attack with unplugged cord (E)
- *   8. Goal — reach the broken generator
+ * Tutorial — eight self-contained mini-levels, one per mechanic.
+ * Each is a tiny room the player can complete in seconds.
+ * They chain together: tut_1 → tut_2 → … → tut_8 → level_01.
  */
 
-// ─── Layout Constants ───────────────────────────────────────────
-const WORLD_W   = 1700;
-const FLOOR_Y   = 550;        // main floor surface
-const UPPER_Y   = 340;        // upper ledge surface
-const G1_X      = 80;
-const PLAYER_X  = 160;
+// ── Shared constants ────────────────────────────────────────────
+const W   = 600;          // small world width for each mini level
+const FY  = 550;          // floor Y
+const GH  = GAME_HEIGHT;
 
-// Section 2: wall to jump over
-const WALL_X    = 300;
-
-// Section 3: push block practice (just a free block to push around)
-const BLOCK_X   = 440;
-
-// Section 4: door + terminal + block prop
-const T1_X      = 560;        // door terminal
-const DOOR_X    = 640;        // slide door
-const BLOCK2_X  = 510;        // block to prop door with (left of terminal)
-
-// Section 5: drawbridge
-const T2_X      = 780;        // drawbridge terminal
-const GAP_LEFT  = 840;        // drawbridge gap start
-const GAP_RIGHT = 1040;       // drawbridge gap end
-const GAP_W     = GAP_RIGHT - GAP_LEFT;
-
-// Section 6: elevator
-const T3_X      = 1120;       // elevator terminal
-const ELEV_X    = 1180;       // elevator position
-const UPPER_LEFT = 1130;      // upper ledge start
-
-// Section 7: enemy
-const ENEMY_X   = 1350;
-
-// Section 8: goal
-const G2_X      = WORLD_W - 100;
-
-// ─── Level Data ─────────────────────────────────────────────────
-export const LEVEL_TUTORIAL = {
-  id: 'level_tutorial',
-  name: 'Tutorial',
-  nextLevel: 'level_01',
-
-  world: { width: WORLD_W, height: GAME_HEIGHT },
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 1 — Movement
+//  Just walk right to the goal generator.
+// ═════════════════════════════════════════════════════════════════
+export const TUT_01 = {
+  id: 'tut_1',
+  name: 'Tutorial: Movement',
+  nextLevel: 'tut_2',
+  world: { width: W, height: GH },
   bgColor: '#1a1a2e',
-
-  // ── Platforms ──────────────────────────────────────────
   platforms: [
-    // Main floor (left side, up to the gap)
-    { x: GAP_LEFT / 2, y: FLOOR_Y + 16, width: GAP_LEFT, height: 32 },
-
-    // Main floor (right side, from gap to just before upper ledge area)
-    { x: (GAP_RIGHT + UPPER_LEFT) / 2, y: FLOOR_Y + 16, width: UPPER_LEFT - GAP_RIGHT, height: 32 },
-
-    // Small wall obstacle to jump over (Section 2)
-    { x: WALL_X, y: FLOOR_Y - 24, width: 24, height: 48 },
-
-    // Upper ledge (right side — elevator destination to end)
-    { x: UPPER_LEFT + (WORLD_W - UPPER_LEFT) / 2, y: UPPER_Y + 16, width: WORLD_W - UPPER_LEFT, height: 32 },
-
-    // Right wall
-    { x: WORLD_W - 8, y: GAME_HEIGHT / 2, width: 16, height: GAME_HEIGHT },
-
-    // Left wall
-    { x: 8, y: GAME_HEIGHT / 2, width: 16, height: GAME_HEIGHT },
-
-    // Pit floor under gap (so player doesn't fall forever)
-    { x: (GAP_LEFT + GAP_RIGHT) / 2, y: GAME_HEIGHT - 16, width: GAP_W + 40, height: 32 },
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
   ],
-
-  // ── Player ─────────────────────────────────────────────
-  player: { x: PLAYER_X, y: FLOOR_Y - 40, generatorId: 'g1' },
-
-  // ── Generators ─────────────────────────────────────────
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
   generators: [
-    { id: 'g1', x: G1_X, y: FLOOR_Y - 20, label: 'G1', isPrimary: true },
-    { id: 'g2', x: G2_X, y: UPPER_Y - 20, label: 'G2', isPrimary: false },
+    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
   ],
-
-  // ── Terminals ──────────────────────────────────────────
-  terminals: [
-    { id: 't_door',   x: T1_X, y: FLOOR_Y - 16, linkTo: 'door1'   },
-    { id: 't_bridge', x: T2_X, y: FLOOR_Y - 16, linkTo: 'bridge1' },
-    { id: 't_elev',   x: T3_X, y: FLOOR_Y - 16, linkTo: 'elev1'   },
-  ],
-
-  // ── Doors ──────────────────────────────────────────────
-  doors: [
+  terminals: [],
+  doors: [],
+  drawbridges: [],
+  elevators: [],
+  enemies: [],
+  pushBlocks: [],
+  spikes: [],
+  goal: { x: W - 60, y: FY - 20 },
+  tutorialPopups: [
     {
-      id: 'door1',
-      x: DOOR_X,
-      y: FLOOR_Y - DOOR.HEIGHT / 2,
+      id: 'tut1_move',
+      x: 120, y: FY - 60, width: 200, height: 120,
+      title: 'Movement',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
+      lines: [
+        'Use  A / D  or  ← / →  to walk.',
+        'Head right to the generator!',
+      ],
     },
   ],
+};
 
-  // ── Drawbridges ────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 2 — Jumping
+//  Jump over a wall to reach the goal.
+// ═════════════════════════════════════════════════════════════════
+export const TUT_02 = {
+  id: 'tut_2',
+  name: 'Tutorial: Jumping',
+  nextLevel: 'tut_3',
+  world: { width: W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+    // Wall obstacle
+    { x: W / 2, y: FY - 24, width: 24, height: 48 },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [],
+  doors: [],
+  drawbridges: [],
+  elevators: [],
+  enemies: [],
+  pushBlocks: [],
+  spikes: [],
+  goal: { x: W - 60, y: FY - 20 },
+  tutorialPopups: [
+    {
+      id: 'tut2_jump',
+      x: W / 2 - 80, y: FY - 60, width: 120, height: 120,
+      title: 'Jumping',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
+      lines: [
+        'Press  SPACE  or  W  to jump.',
+        'Hop over the wall!',
+      ],
+    },
+  ],
+};
+
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 3 — Push Blocks
+//  Push a block out of the way to reach the goal.
+// ═════════════════════════════════════════════════════════════════
+const T3_LEDGE_Y = 420;          // elevated ledge surface (unreachable from floor)
+export const TUT_03 = {
+  id: 'tut_3',
+  name: 'Tutorial: Push Blocks',
+  nextLevel: 'tut_4',
+  world: { width: W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    // Main floor
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    // Elevated ledge on the right — too high to reach by jumping alone
+    { x: 460, y: T3_LEDGE_Y + 16, width: 260, height: 32 },
+    // Walls
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,    y: FY - 20,       label: 'G1', isPrimary: true },
+    { id: 'g2', x: 500,   y: T3_LEDGE_Y - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [],
+  doors: [],
+  drawbridges: [],
+  elevators: [],
+  enemies: [],
+  pushBlocks: [
+    { id: 'block1', x: 240, y: FY - PUSH_BLOCK.SIZE / 2 },
+  ],
+  spikes: [],
+  goal: { x: 500, y: T3_LEDGE_Y - 20 },
+  tutorialPopups: [
+    {
+      id: 'tut3_block',
+      x: 160, y: FY - 60, width: 160, height: 120,
+      title: 'Push Blocks',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
+      lines: [
+        'Walk up to the block and press  F',
+        'to grab it. Push it to the ledge,',
+        'then jump on the block to reach',
+        'the generator above!',
+      ],
+    },
+  ],
+};
+
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 4 — Terminals & Doors
+//  Plug cord into terminal to open door. Push block under door
+//  to prop it, unplug, walk through the propped gap.
+// ═════════════════════════════════════════════════════════════════
+const T4_TERM = 220;
+const T4_DOOR = 300;
+export const TUT_04 = {
+  id: 'tut_4',
+  name: 'Tutorial: Doors',
+  nextLevel: 'tut_5',
+  world: { width: W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [
+    { id: 't_door', x: T4_TERM, y: FY - 16, linkTo: 'door1' },
+  ],
+  doors: [
+    { id: 'door1', x: T4_DOOR, y: FY - DOOR.HEIGHT / 2 },
+  ],
+  drawbridges: [],
+  elevators: [],
+  enemies: [],
+  pushBlocks: [
+    { id: 'block1', x: 160, y: FY - PUSH_BLOCK.SIZE / 2 },
+  ],
+  spikes: [],
+  goal: { x: W - 60, y: FY - 20 },
+  tutorialPopups: [
+    {
+      id: 'tut4_door',
+      x: 140, y: FY - 60, width: 180, height: 120,
+      title: 'Terminals & Doors',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
+      lines: [
+        'Press  E  at the red terminal',
+        'to plug in — the door opens!',
+        'Push the block under the door,',
+        'then unplug (E) and walk through.',
+      ],
+    },
+  ],
+};
+
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 5 — Drawbridge
+//  Plug cord to swing a drawbridge across a gap.
+// ═════════════════════════════════════════════════════════════════
+const T5_W      = 700;
+const T5_TERM   = 200;
+const T5_GAP_L  = 260;
+const T5_GAP_R  = 440;
+const T5_GAP_W  = T5_GAP_R - T5_GAP_L;
+const T5_PIT_Y  = 640;           // shallow pit floor surface
+export const TUT_05 = {
+  id: 'tut_5',
+  name: 'Tutorial: Drawbridge',
+  nextLevel: 'tut_6',
+  world: { width: T5_W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    // Left floor
+    { x: T5_GAP_L / 2, y: FY + 16, width: T5_GAP_L, height: 32 },
+    // Right floor
+    { x: (T5_GAP_R + T5_W) / 2, y: FY + 16, width: T5_W - T5_GAP_R, height: 32 },
+    // Shallow pit floor (block + jump can escape)
+    { x: (T5_GAP_L + T5_GAP_R) / 2, y: T5_PIT_Y + 16, width: T5_GAP_W + 40, height: 32 },
+    // Walls
+    { x: 8,       y: GH / 2, width: 16, height: GH },
+    { x: T5_W - 8, y: GH / 2, width: 16, height: GH },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,      y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: T5_W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [
+    { id: 't_bridge', x: T5_TERM, y: FY - 16, linkTo: 'bridge1' },
+  ],
+  doors: [],
   drawbridges: [
     {
       id: 'bridge1',
-      pivotX: GAP_LEFT,
-      pivotY: FLOOR_Y,
-      width: GAP_W,
+      pivotX: T5_GAP_L,
+      pivotY: FY,
+      width: T5_GAP_W,
       direction: 'right',
     },
   ],
+  elevators: [],
+  enemies: [],
+  pushBlocks: [
+    // Push this into the pit before crossing — safety net if you fall
+    { id: 'block1', x: 230, y: FY - PUSH_BLOCK.SIZE / 2 },
+  ],
+  spikes: [],
+  goal: { x: T5_W - 60, y: FY - 20 },
+  tutorialPopups: [
+    {
+      id: 'tut5_bridge',
+      x: 100, y: FY - 60, width: 170, height: 120,
+      title: 'Drawbridges',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
+      lines: [
+        'Push the block into the pit first!',
+        'Then press  E  at the terminal to',
+        'swing the bridge. If you fall, the',
+        'block lets you jump back out.',
+      ],
+    },
+  ],
+};
 
-  // ── Elevators ──────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 6 — Elevator
+//  Plug cord to activate elevator, ride up to goal on upper ledge.
+// ═════════════════════════════════════════════════════════════════
+const T6_UPPER = 340;
+export const TUT_06 = {
+  id: 'tut_6',
+  name: 'Tutorial: Elevator',
+  nextLevel: 'tut_7',
+  world: { width: W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    { x: W / 2 + W / 4, y: T6_UPPER + 16, width: W / 2, height: 32 },
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,    y: FY - 20,     label: 'G1', isPrimary: true },
+    { id: 'g2', x: W - 60, y: T6_UPPER - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [
+    { id: 't_elev', x: 220, y: FY - 16, linkTo: 'elev1' },
+  ],
+  doors: [],
+  drawbridges: [],
   elevators: [
     {
       id: 'elev1',
-      x: ELEV_X,
-      startY: FLOOR_Y - ELEVATOR.HEIGHT / 2,
-      endY: UPPER_Y - ELEVATOR.HEIGHT / 2,
+      x: 320,
+      startY: FY - ELEVATOR.HEIGHT / 2,
+      endY: T6_UPPER - ELEVATOR.HEIGHT / 2,
     },
   ],
+  enemies: [],
+  pushBlocks: [],
+  spikes: [],
+  goal: { x: W - 60, y: T6_UPPER - 20 },
+  tutorialPopups: [
+    {
+      id: 'tut6_elev',
+      x: 170, y: FY - 60, width: 130, height: 120,
+      title: 'Elevators',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
+      lines: [
+        'Press  E  at the terminal to',
+        'power the elevator. Stand on',
+        'it to ride up!',
+      ],
+    },
+  ],
+};
 
-  // ── Enemies ────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 7 — Enemies & Attacking
+//  Defeat an enemy blocking the path using the cord plug attack.
+// ═════════════════════════════════════════════════════════════════
+export const TUT_07 = {
+  id: 'tut_7',
+  name: 'Tutorial: Attacking',
+  nextLevel: 'tut_8',
+  world: { width: W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [],
+  doors: [],
+  drawbridges: [],
+  elevators: [],
   enemies: [
     {
       id: 'enemy1',
-      x: ENEMY_X,
-      y: UPPER_Y - ENEMY.HEIGHT / 2,
-      rangeLeft: UPPER_LEFT + 40,
-      rangeRight: G2_X - 60,
-      direction: 'right',
+      x: 350,
+      y: FY - ENEMY.HEIGHT / 2,
+      rangeLeft: 250,
+      rangeRight: 450,
+      direction: 'left',
       label: '👾',
     },
   ],
-
-  // ── Push Blocks ────────────────────────────────────────
-  pushBlocks: [
-    { id: 'block1', x: BLOCK_X,  y: FLOOR_Y - PUSH_BLOCK.SIZE / 2 },
-    { id: 'block2', x: BLOCK2_X, y: FLOOR_Y - PUSH_BLOCK.SIZE / 2 },
-  ],
-
-  // ── Spikes ─────────────────────────────────────────────
+  pushBlocks: [],
   spikes: [],
-
-  // ── Goal ───────────────────────────────────────────────
-  goal: { x: G2_X, y: UPPER_Y - 20 },
-
-  // ── Midground Buildings ────────────────────────────────
-  midgroundBuildings: [
-    {
-      x: 30, y: FLOOR_Y - 20, width: 120, height: 280, color: 0x161630,
-      roofDetails: [{ type: 'tank', offsetX: 40 }],
-    },
-    {
-      x: 500, y: FLOOR_Y - 10, width: 200, height: 300, color: 0x14142e,
-      roofDetails: [{ type: 'ac', offsetX: 20 }, { type: 'antenna', offsetX: 130 }],
-    },
-    {
-      x: UPPER_LEFT + 10, y: UPPER_Y + 32, width: WORLD_W - UPPER_LEFT - 30, height: 500, color: 0x1e1e3c,
-      roofDetails: [
-        { type: 'ac', offsetX: 20 }, { type: 'tank', offsetX: 150 },
-        { type: 'antenna', offsetX: 300 }, { type: 'dish', offsetX: 450 },
-      ],
-    },
-  ],
-
-  // ══════════════════════════════════════════════════════════
-  //  TUTORIAL POPUPS — appear when player is near each zone
-  // ══════════════════════════════════════════════════════════
+  goal: { x: W - 60, y: FY - 20 },
   tutorialPopups: [
     {
-      id: 'tut_welcome',
-      x: PLAYER_X + 10,
-      y: FLOOR_Y - 60,
-      width: 120,
-      height: 120,
-      title: 'Welcome, Electrician!',
+      id: 'tut7_enemy',
+      x: 180, y: FY - 60, width: 120, height: 120,
+      title: 'Enemies',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
       lines: [
-        'Repair broken generators across the city.',
-        'Use  A / D  or  ← / →  to move.',
+        'An enemy blocks your path!',
+        'With cord unplugged, press  E',
+        'to swing your plug. ZAP!',
       ],
     },
+  ],
+};
+
+// ═════════════════════════════════════════════════════════════════
+//  Tutorial 8 — The Goal
+//  Simple room explaining the objective of every level.
+// ═════════════════════════════════════════════════════════════════
+export const TUT_08 = {
+  id: 'tut_8',
+  name: 'Tutorial: The Goal',
+  nextLevel: 'level_01',
+  world: { width: W, height: GH },
+  bgColor: '#1a1a2e',
+  platforms: [
+    { x: W / 2, y: FY + 16, width: W, height: 32 },
+    { x: 8,     y: GH / 2,  width: 16, height: GH },
+    { x: W - 8, y: GH / 2,  width: 16, height: GH },
+  ],
+  player: { x: 80, y: FY - 40, generatorId: 'g1' },
+  generators: [
+    { id: 'g1', x: 40,    y: FY - 20, label: 'G1', isPrimary: true },
+    { id: 'g2', x: W - 60, y: FY - 20, label: 'G2', isPrimary: false },
+  ],
+  terminals: [],
+  doors: [],
+  drawbridges: [],
+  elevators: [],
+  enemies: [],
+  pushBlocks: [],
+  spikes: [],
+  goal: { x: W - 60, y: FY - 20 },
+  tutorialPopups: [
     {
-      id: 'tut_jump',
-      x: WALL_X - 60,
-      y: FLOOR_Y - 60,
-      width: 100,
-      height: 120,
-      title: 'Jumping',
-      lines: [
-        'There\'s a wall in your way!',
-        'Press  SPACE  or  W  to jump over it.',
-      ],
-    },
-    {
-      id: 'tut_block',
-      x: BLOCK_X - 30,
-      y: FLOOR_Y - 60,
-      width: 100,
-      height: 120,
-      title: 'Push Blocks',
-      lines: [
-        'See that grey block? Walk up to it',
-        'and press  F  to grab it.',
-        'Then move left/right to push it.',
-        'Press  F  again to let go.',
-      ],
-    },
-    {
-      id: 'tut_door',
-      x: T1_X - 30,
-      y: FLOOR_Y - 60,
-      width: 100,
-      height: 120,
-      title: 'Terminals & Doors',
-      lines: [
-        'Press  E  at the terminal to plug in.',
-        'This opens the door! But it closes',
-        'when you unplug. Push a block under',
-        'the door to prop it open, then unplug!',
-      ],
-    },
-    {
-      id: 'tut_drawbridge',
-      x: T2_X - 30,
-      y: FLOOR_Y - 60,
-      width: 80,
-      height: 120,
-      title: 'Drawbridges',
-      lines: [
-        'This terminal powers a Drawbridge.',
-        'Press  E  to plug in and the',
-        'bridge swings across the gap!',
-      ],
-    },
-    {
-      id: 'tut_elevator',
-      x: T3_X - 30,
-      y: FLOOR_Y - 60,
-      width: 80,
-      height: 120,
-      title: 'Elevators',
-      lines: [
-        'This terminal powers an Elevator.',
-        'Unplug the bridge, press  E  here,',
-        'then stand on it to ride up!',
-      ],
-    },
-    {
-      id: 'tut_enemy',
-      x: UPPER_LEFT + 50,
-      y: UPPER_Y - 60,
-      width: 120,
-      height: 120,
-      title: 'Enemies & Attacking',
-      lines: [
-        'An enemy is patrolling — avoid it!',
-        'With cord unplugged, press  E  to',
-        'swing your plug as a weapon. ZAP!',
-      ],
-    },
-    {
-      id: 'tut_goal',
-      x: G2_X - 100,
-      y: UPPER_Y - 60,
-      width: 100,
-      height: 120,
+      id: 'tut8_goal',
+      x: 120, y: FY - 60, width: 250, height: 120,
       title: 'The Goal',
+      speakerName: 'Mentor',
+      portraitKey: 'mentor_face',
       lines: [
-        'That\'s a broken Generator!',
-        'Walk up to repair it and restore',
-        'power. Everything is connected!',
+        'Every level has a broken Generator.',
+        'Reach it to repair it and restore',
+        'power — that\'s how you win!',
       ],
     },
   ],

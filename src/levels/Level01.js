@@ -82,4 +82,65 @@ export const LEVEL_01 = {
 
   // ── Goal ───────────────────────────────────────────────
   goal: { x: WORLD_W - 60, y: LEDGE_Y - 20 },
+
+  // ── Midground Buildings ────────────────────────────────
+  midgroundBuildings: [
+    // Behind generator / player area (far left)
+    {
+      x: 16, y: 582, width: 120, height: 260, color: 0x161630,
+      roofDetails: [
+        { type: 'tank', offsetX: 30 },
+        { type: 'pipes', offsetX: 80, width: 25 },
+      ],
+    },
+    // Behind door / terminal area
+    {
+      x: 240, y: 582, width: 160, height: 310, color: 0x14142e,
+      roofDetails: [
+        { type: 'ac', offsetX: 15 },
+        { type: 'fire_escape', offsetX: 0, width: 18 },
+        { type: 'antenna', offsetX: 120 },
+      ],
+    },
+    // Mid section behind push block area
+    {
+      x: 440, y: 582, width: 180, height: 350, color: 0x1e1e3c,
+      roofDetails: [
+        { type: 'ac', offsetX: 20 },
+        { type: 'dish', offsetX: 90 },
+        { type: 'pipes', offsetX: 140, width: 30 },
+      ],
+    },
+    // Behind terminal / elevator area
+    {
+      x: 660, y: 582, width: 130, height: 280, color: 0x191838,
+      roofDetails: [
+        { type: 'ac', offsetX: 15 },
+        { type: 'neon_sign', offsetX: 35, offsetY: 50, width: 35, neonColor: 0xff2266 },
+      ],
+    },
+    // Under upper ledge — makes it look like a rooftop
+    {
+      x: 840, y: 372, width: 260, height: 500, color: 0x1c1c3a,
+      roofDetails: [
+        { type: 'antenna', offsetX: 30 },
+        { type: 'tank', offsetX: 120 },
+        { type: 'dish', offsetX: 200 },
+        { type: 'awning', offsetX: 50, offsetY: 80, width: 28, color: 0x553322 },
+      ],
+    },
+  ],
+
+  // ── Lampposts ──────────────────────────────────────────
+  lampposts: [
+    { x: 180, y: FLOOR_Y },
+    { x: 570, y: FLOOR_Y },
+    { x: 820, y: FLOOR_Y },
+  ],
+
+  // ── Decorations (atmospheric only) ─────────────────────
+  decorations: [
+    { type: 'puddle', x: 220, y: FLOOR_Y, width: 28 },
+    { type: 'steam_vent', x: 950, y: LEDGE_Y },
+  ],
 };

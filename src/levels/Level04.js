@@ -216,4 +216,75 @@ export const LEVEL_04 = {
 
   // ── Goal ───────────────────────────────────────────────
   goal: { x: G3_X, y: TIER3_Y - 30 },
+
+  // ── Midground Buildings ────────────────────────────────
+  midgroundBuildings: [
+    // Tall tower under G1 ledge (top-left starting platform)
+    {
+      x: 16, y: G1_LEDGE_Y + 32, width: 185, height: 620, color: 0x161630,
+      roofDetails: [
+        { type: 'tank', offsetX: 40 },
+        { type: 'antenna', offsetX: 140 },
+        { type: 'pipes', offsetX: 10, width: 20 },
+      ],
+    },
+    // Under Tier 0 left section
+    {
+      x: 100, y: TIER0_Y + 32, width: 180, height: 120, color: 0x14142e,
+      roofDetails: [
+        { type: 'ac', offsetX: 20 },
+        { type: 'pipes', offsetX: 110, width: 25 },
+      ],
+    },
+    // Under Tier 1 left (makes it look like a rooftop)
+    {
+      x: T1_LEFT_L, y: TIER1_Y + 32, width: 160, height: 280, color: 0x1e1e3c,
+      roofDetails: [
+        { type: 'ac', offsetX: 15 },
+        { type: 'fire_escape', offsetX: 0, width: 18 },
+        { type: 'dish', offsetX: 110 },
+      ],
+    },
+    // Wide building under Tier 2
+    {
+      x: T2_LEFT, y: TIER2_Y + 32, width: 340, height: 440, color: 0x191838,
+      roofDetails: [
+        { type: 'antenna', offsetX: 40 },
+        { type: 'tank', offsetX: 160 },
+        { type: 'ac', offsetX: 260 },
+        { type: 'neon_sign', offsetX: 80, offsetY: 60, width: 30, neonColor: 0x44aaff },
+      ],
+    },
+    // Tall tower under Tier 3 (goal area)
+    {
+      x: T3_LEFT, y: TIER3_Y + 32, width: 195, height: 560, color: 0x1c1c3a,
+      roofDetails: [
+        { type: 'antenna', offsetX: 100 },
+        { type: 'tank', offsetX: 30 },
+        { type: 'pipes', offsetX: 150, width: 30 },
+      ],
+    },
+    // Small building on Tier 0 far right
+    {
+      x: 900, y: TIER0_Y + 32, width: 140, height: 110, color: 0x171734,
+      roofDetails: [
+        { type: 'ac', offsetX: 20 },
+        { type: 'awning', offsetX: 60, offsetY: 30, width: 24, color: 0x553322 },
+      ],
+    },
+  ],
+
+  // ── Lampposts ──────────────────────────────────────────
+  lampposts: [
+    { x: 60, y: TIER0_Y },
+    { x: 550, y: TIER0_Y },
+    { x: 800, y: TIER0_Y },
+    { x: 730, y: TIER1_Y },
+  ],
+
+  // ── Decorations (atmospheric only) ─────────────────────
+  decorations: [
+    { type: 'puddle', x: 1050, y: TIER0_Y, width: 30 },
+    { type: 'steam_vent', x: 530, y: TIER1_Y },
+  ],
 };

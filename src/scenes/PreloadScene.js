@@ -2,8 +2,16 @@ import Phaser from 'phaser';
 import { SCENES, PLAYER, GENERATOR, TERMINAL, DOOR, PUSH_BLOCK, ELEVATOR, ENEMY } from '../config.js';
 import { generateSparkySprite } from '../assets/SparkySprite.js';
 import { generateOutlet, generatePlug, generateWoodenCrate } from '../assets/AssetTextures.js';
+import { generateLamppost, generateLamppostGlow } from '../assets/EnvironmentTextures.js';
 import { generateWorkerSprite } from '../assets/WorkerSprite.js';
+import { generateMentorFace } from '../assets/MentorFace.js';
 import sparkyJoeMenuUrl from '../assets/SparkyJoe_clean.png';
+import mentorBigUrl from '../assets/mentor_big.png';
+
+// Relative crop box (0..1) into mentor_big to create a zoomed bust portrait.
+// If you want it tighter/looser, tweak these numbers.
+const MENTOR_BUST_CROP = { x: 0.22, y: 0.02, w: 0.56, h: 0.56 };
+const MENTOR_PORTRAIT_SIZE = 64;
 
 /**
  * PreloadScene — generates placeholder textures and transitions to menu.
@@ -16,6 +24,9 @@ export class PreloadScene extends Phaser.Scene {
   preload() {
     // Load Sparky Joe character image for the menu screen
     this.load.image('sparky_joe_menu', sparkyJoeMenuUrl);
+
+    // Load mentor portrait for tutorial radio popups
+    this.load.image('mentor_big', mentorBigUrl);
   }
 
   create() {
@@ -75,6 +86,10 @@ export class PreloadScene extends Phaser.Scene {
     // Wooden crate for push blocks
     generateWoodenCrate(this, PUSH_BLOCK.SIZE); // 'crate_48_8B6914'
 
+    // --- Environment decorations ---
+    generateLamppost(this);           // 'lamppost'
+    generateLamppostGlow(this);       // 'lamppost_glow'
+
     // --- Generate rectangle textures for elements that still need them ---
     this._generateGeneratorTexture();
     this._rect('ledge', 32, 32, 0x555555);
@@ -88,6 +103,11 @@ export class PreloadScene extends Phaser.Scene {
     // --- Generate the worker sprite (reference character) ---
     generateWorkerSprite(this);
 
+    // --- Mentor portrait for tutorial radio popups ---
+    // Prefer the provided PNG (cropped to a bust). Fallback to procedural if missing.
+    this._createMentorBustPortrait();
+    generateMentorFace(this);
+
     this.scene.start(SCENES.MENU);
     } catch (e) {
       console.error('PreloadScene error:', e);
@@ -96,6 +116,27 @@ export class PreloadScene extends Phaser.Scene {
         wordWrap: { width: 980 },
       });
     }
+  }
+
+  /** Create a zoomed-in bust portrait texture `mentor_face` from `mentor_big`. */
+  _createMentorBustPortrait() {
+    if (!this.textures.exists('mentor_big')) return;
+    if (this.textures.exists('mentor_face')) return;
+
+    const srcImg = this.textures.get('mentor_big').getSourceImage();
+    if (!srcImg?.width || !srcImg?.height) return;
+
+    const sx = Math.max(0, Math.floor(srcImg.width * MENTOR_BUST_CROP.x));
+    const sy = Math.max(0, Math.floor(srcImg.height * MENTOR_BUST_CROP.y));
+    const sw = Math.max(1, Math.floor(srcImg.width * MENTOR_BUST_CROP.w));
+    const sh = Math.max(1, Math.floor(srcImg.height * MENTOR_BUST_CROP.h));
+
+    const canvasTex = this.textures.createCanvas('mentor_face', MENTOR_PORTRAIT_SIZE, MENTOR_PORTRAIT_SIZE);
+    const ctx = canvasTex.getContext();
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, MENTOR_PORTRAIT_SIZE, MENTOR_PORTRAIT_SIZE);
+    ctx.drawImage(srcImg, sx, sy, sw, sh, 0, 0, MENTOR_PORTRAIT_SIZE, MENTOR_PORTRAIT_SIZE);
+    canvasTex.refresh();
   }
 
   /** Helper: create a filled rectangle texture. */
@@ -293,107 +334,119 @@ export class PreloadScene extends Phaser.Scene {
     g.destroy();
   }
 
-  /** Generate a rusty steel-beam ground tile with rivets (64×32 rectangle). */
+  /**
+   * Generate a concrete rooftop parapet tile with old New York–style
+   * ornamentation (64×32, tileable).  Top edge is a decorative cornice
+   * with dentil molding and a capstone lip; body is weathered concrete.
+   */
   _generateGroundTexture() {
     const g = this.add.graphics();
-    const W = 64; // tile width  (elongated)
-    const H = 32; // tile height
+    const W = 64;
+    const H = 32;
 
-    // --- Rusty steel base (International Orange / oxide red) ---
-    g.fillStyle(0x8b3a2a, 1);
+    // ── Concrete body ──
+    g.fillStyle(0x7a7568, 1);           // warm sandstone-gray
     g.fillRect(0, 0, W, H);
-    // Slightly darker bottom half for depth
-    g.fillStyle(0x6e2e22, 1);
+
+    // Slightly darker lower half (shadow / underside)
+    g.fillStyle(0x6a6558, 0.6);
     g.fillRect(0, H * 0.55, W, H * 0.45);
 
-    // --- Rust patina variation (blotchy patches, spread across wider tile) ---
-    g.fillStyle(0xa04828, 0.5);
-    g.fillRect(2, 2, 10, 7);
-    g.fillRect(35, 10, 14, 8);
-    g.fillRect(52, 3, 9, 6);
-    g.fillRect(8, 22, 14, 6);
-    g.fillRect(44, 22, 12, 7);
-    g.fillStyle(0x944030, 0.4);
-    g.fillRect(18, 1, 12, 5);
-    g.fillRect(0, 14, 9, 6);
-    g.fillRect(28, 18, 10, 5);
-    g.fillRect(54, 14, 8, 6);
-    // Darker corrosion spots
-    g.fillStyle(0x5a2218, 0.35);
-    g.fillRect(10, 10, 5, 3);
-    g.fillRect(40, 4, 5, 3);
-    g.fillRect(56, 26, 6, 3);
-    g.fillRect(3, 27, 6, 3);
-    g.fillRect(24, 12, 4, 3);
+    // Subtle color variation patches (weathered concrete is never uniform)
+    g.fillStyle(0x8a8578, 0.35);
+    g.fillRect(3, 12, 12, 6);
+    g.fillRect(34, 14, 10, 5);
+    g.fillRect(52, 10, 8, 7);
+    g.fillStyle(0x625e52, 0.25);
+    g.fillRect(16, 18, 14, 5);
+    g.fillRect(44, 20, 12, 6);
+    g.fillRect(6, 24, 8, 5);
 
-    // --- Horizontal beam groove lines ---
-    g.lineStyle(1, 0x4a2018, 0.8);
-    g.beginPath();
-    g.moveTo(0, 6);  g.lineTo(W, 6);
-    g.moveTo(0, 26); g.lineTo(W, 26);
-    g.strokePath();
+    // Hairline cracks (very subtle)
+    g.lineStyle(0.5, 0x555048, 0.3);
+    g.lineBetween(18, 14, 22, 28);
+    g.lineBetween(46, 12, 50, 22);
+    g.lineStyle(0.5, 0x555048, 0.2);
+    g.lineBetween(8, 20, 14, 26);
 
-    // Lighter highlight just above grooves (top-lit bevel)
-    g.lineStyle(1, 0xb05838, 0.4);
-    g.beginPath();
-    g.moveTo(0, 5);  g.lineTo(W, 5);
-    g.moveTo(0, 25); g.lineTo(W, 25);
-    g.strokePath();
+    // ── Capstone lip (top edge — the walkable parapet cap) ──
+    const capH = 4;
+    g.fillStyle(0x908a7c, 1);           // lighter limestone cap
+    g.fillRect(0, 0, W, capH);
+    // Bright edge highlight
+    g.fillStyle(0xa8a294, 0.6);
+    g.fillRect(0, 0, W, 1);
+    // Shadow line under cap
+    g.lineStyle(1, 0x5a564c, 0.7);
+    g.lineBetween(0, capH, W, capH);
 
-    // --- Weathered streaks (rain staining / oxide runs) ---
-    g.fillStyle(0xc06030, 0.2);
-    g.fillRect(1, 9, 18, 1);
-    g.fillRect(30, 14, 22, 1);
-    g.fillRect(5, 19, 16, 1);
-    g.fillRect(48, 11, 14, 1);
-    g.fillStyle(0x4e1e14, 0.2);
-    g.fillRect(22, 11, 16, 1);
-    g.fillRect(8, 22, 24, 1);
-    g.fillRect(42, 20, 18, 1);
+    // ── Cornice molding band (below cap) ──
+    const moldY = capH + 1;
+    const moldH = 3;
+    // Ogee / quarter-round profile (lighter raised band)
+    g.fillStyle(0x86806e, 1);
+    g.fillRect(0, moldY, W, moldH);
+    // Top highlight on molding
+    g.fillStyle(0x9a9486, 0.5);
+    g.fillRect(0, moldY, W, 1);
+    // Bottom shadow on molding
+    g.fillStyle(0x5e5a4e, 0.5);
+    g.fillRect(0, moldY + moldH - 1, W, 1);
 
-    // --- Rivets (staggered, not a perfect grid) ---
-    const rivetPositions = [
-      { x: 5,  y: 5 },
-      { x: 22, y: 5 },
-      { x: 42, y: 5 },
-      { x: W - 6, y: 5 },
-      { x: 14, y: H - 6 },
-      { x: 32, y: H - 6 },
-      { x: 50, y: H - 6 },
-    ];
-    for (const r of rivetPositions) {
-      // Rivet shadow (dark ring)
-      g.fillStyle(0x3a1a10, 0.9);
-      g.fillCircle(r.x, r.y + 0.5, 2.6);
-      // Rivet body — oxidized metal
-      g.fillStyle(0x9a5038, 1);
-      g.fillCircle(r.x, r.y, 2.2);
-      // Rivet highlight (specular dot)
-      g.fillStyle(0xc87050, 0.7);
-      g.fillCircle(r.x - 0.6, r.y - 0.6, 0.9);
+    // ── Dentil molding row ──
+    const dentilY = moldY + moldH + 1;  // ~9
+    const dentilW = 4;
+    const dentilH = 3;
+    const dentilGap = 3;
+    const dentilStep = dentilW + dentilGap;
+
+    g.fillStyle(0x8a8474, 1);
+    for (let dx = 1; dx < W; dx += dentilStep) {
+      g.fillRect(dx, dentilY, dentilW, dentilH);
     }
+    // Tiny highlight on each dentil top
+    g.fillStyle(0x9e9888, 0.5);
+    for (let dx = 1; dx < W; dx += dentilStep) {
+      g.fillRect(dx, dentilY, dentilW, 1);
+    }
+    // Shadow line under dentil row
+    g.lineStyle(0.5, 0x5a564a, 0.5);
+    g.lineBetween(0, dentilY + dentilH, W, dentilY + dentilH);
 
-    // --- Vertical panel seam in the middle ---
-    g.lineStyle(1, 0x4a1e14, 0.5);
-    g.beginPath();
-    g.moveTo(32, 0); g.lineTo(32, H);
-    g.strokePath();
-    g.lineStyle(1, 0xb86848, 0.2);
-    g.beginPath();
-    g.moveTo(33, 0); g.lineTo(33, H);
-    g.strokePath();
+    // ── Recessed panel lines (below dentils, brownstone-style) ──
+    const panelY = dentilY + dentilH + 2; // ~14
+    const panelH = H - panelY - 4;        // body panel height
+    const panelInset = 2;
 
-    // --- Edge border (panel seam) ---
-    g.lineStyle(1, 0x4a1e14, 0.7);
+    // Left panel
+    g.lineStyle(0.5, 0x605c50, 0.5);
+    g.strokeRect(panelInset, panelY, W / 2 - panelInset - 1, panelH);
+    // Right panel
+    g.strokeRect(W / 2 + 1, panelY, W / 2 - panelInset - 1, panelH);
+    // Inner shadow (gives recessed look)
+    g.lineStyle(0.5, 0x8a8678, 0.3);
+    g.lineBetween(panelInset + 1, panelY + panelH - 1, W / 2 - panelInset, panelY + panelH - 1);
+    g.lineBetween(W / 2 + 2, panelY + panelH - 1, W - panelInset - 1, panelY + panelH - 1);
+
+    // ── Bottom edge / drip line ──
+    g.fillStyle(0x5a564c, 0.7);
+    g.fillRect(0, H - 2, W, 2);
+    // Water stain drip marks (atmospheric)
+    g.fillStyle(0x56524a, 0.2);
+    g.fillRect(10, H - 6, 2, 4);
+    g.fillRect(38, H - 5, 2, 3);
+    g.fillRect(55, H - 7, 2, 5);
+
+    // ── Mortar line at tile seams (vertical) ──
+    g.lineStyle(0.5, 0x5e5a50, 0.3);
+    g.lineBetween(0, capH + 1, 0, H);
+    g.lineBetween(W - 1, capH + 1, W - 1, H);
+
+    // ── Edge border ──
+    g.lineStyle(1, 0x504c44, 0.5);
     g.strokeRect(0, 0, W, H);
-    // Top-edge highlight (warm)
-    g.lineStyle(1, 0xb86848, 0.3);
-    g.beginPath();
-    g.moveTo(1, 1); g.lineTo(W - 1, 1);
-    g.strokePath();
 
     g.generateTexture('ground', W, H);
     g.destroy();
   }
 }
-

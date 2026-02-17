@@ -92,10 +92,10 @@ export const LEVEL_02 = {
     // Pit floor (bottom of the pit — blocks land here)
     { x: PIT_CENTER,                  y: PIT_FLOOR + 16, width: PIT_RIGHT - PIT_LEFT, height: 32 },
 
-    // Steps (small platforms going up from floor level to mid platform)
-    { x: STEP1_X,  y: STEP1_Y + 8,  width: 64, height: 16 },
-    { x: STEP2_X,  y: STEP2_Y + 8,  width: 64, height: 16 },
-    { x: STEP3_X,  y: STEP3_Y + 8,  width: 64, height: 16 },
+    // Steps (small platforms going up — styled as rooftop objects)
+    { x: STEP1_X,  y: STEP1_Y + 8,  width: 64, height: 16, style: 'dumpster' },
+    { x: STEP2_X,  y: STEP2_Y + 8,  width: 64, height: 16, style: 'ac_unit' },
+    { x: STEP3_X,  y: STEP3_Y + 8,  width: 64, height: 16, style: 'vent_box' },
 
     // Mid platform
     { x: MID_LEFT + MID_W / 2,       y: MID_Y + 16,    width: MID_W,  height: 32 },
@@ -278,4 +278,17 @@ export const LEVEL_02 = {
 
   // ── Goal ───────────────────────────────────────────────
   goal: { x: G2_X, y: TOP_Y - 20 },
+
+  // ── Lampposts ──────────────────────────────────────────
+  lampposts: [
+    { x: 180, y: FLOOR_Y },
+    { x: 850, y: FLOOR_Y },
+    { x: 610, y: MID_Y },
+  ],
+
+  // ── Decorations (atmospheric only) ─────────────────────
+  decorations: [
+    { type: 'puddle', x: 100, y: FLOOR_Y, width: 25 },
+    { type: 'steam_vent', x: 700, y: MID_Y },
+  ],
 };

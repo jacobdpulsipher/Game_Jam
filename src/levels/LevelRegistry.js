@@ -135,11 +135,15 @@ import { LEVEL_02 } from './Level02.js';
 import { LEVEL_03 } from './Level03.js';
 import { LEVEL_04 } from './Level04.js';
 import { LEVEL_05 } from './Level05.js';
-import { LEVEL_TUTORIAL } from './LevelTutorial.js';
+import {
+  TUT_01, TUT_02, TUT_03, TUT_04,
+  TUT_05, TUT_06, TUT_07, TUT_08,
+} from './LevelTutorial.js';
 
-/** Ordered list of all levels. */
+/** Ordered list of all levels (tutorials + gameplay). */
 const LEVELS = [
-  LEVEL_TUTORIAL,
+  TUT_01, TUT_02, TUT_03, TUT_04,
+  TUT_05, TUT_06, TUT_07, TUT_08,
   LEVEL_01,
   LEVEL_02,
   LEVEL_03,
@@ -164,15 +168,14 @@ export function getNextLevel(currentId) {
   return getLevelById(current.nextLevel);
 }
 
-/** Gameplay levels only (excludes tutorial). */
-const GAMEPLAY_LEVELS = [LEVEL_01, LEVEL_02, LEVEL_03, LEVEL_04, LEVEL_05];
-
 /** Get list of all level ids (for a level-select screen). */
 export function getAllLevelIds() {
-  return GAMEPLAY_LEVELS.map(l => l.id);
+  return LEVELS.map(l => l.id);
 }
 
-/** Get all levels (id + name) for level-select UI. */
+/** Get all gameplay levels (id + name) for level-select UI — excludes tutorials. */
 export function getAllLevels() {
-  return GAMEPLAY_LEVELS.map((l, i) => ({ id: l.id, name: l.name, index: i + 1 }));
+  return LEVELS
+    .filter(l => !l.id.startsWith('tut_'))
+    .map((l, i) => ({ id: l.id, name: l.name, index: i + 1 }));
 }

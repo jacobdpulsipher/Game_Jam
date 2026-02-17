@@ -22,7 +22,7 @@ export class MenuScene extends Phaser.Scene {
     const charX = cx - 220;
     const charY = cy + 40;
     const sparky = this.add.image(charX, charY, 'sparky_joe_menu');
-    // Scale to a nice menu size (~280px tall)
+    // Scale to a nice menu size (~320px tall)
     const targetHeight = 320;
     const scale = targetHeight / sparky.height;
     sparky.setScale(scale);
@@ -97,7 +97,7 @@ export class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    // Subtle color cycle on subtitle
+    // Subtle scale pulse on subtitle
     this.tweens.add({
       targets: subtitleMain,
       scaleX: 1.02,
@@ -144,7 +144,7 @@ export class MenuScene extends Phaser.Scene {
       strokeThickness: 2,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    tutBtn.on('pointerup', () => this._startLevel('level_tutorial'));
+    tutBtn.on('pointerup', () => this._startLevel('tut_1'));
     tutBtn.on('pointerover', () => { tutBtn.setColor('#ffffff'); tutBtn.setScale(1.1); });
     tutBtn.on('pointerout', () => { tutBtn.setColor('#ffaa44'); tutBtn.setScale(1.0); });
 

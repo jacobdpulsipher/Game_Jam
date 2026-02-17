@@ -106,9 +106,9 @@ export const LEVEL_05 = {
     // TOP LEDGE (starting platform with G1)
     { x: (TOP_LEDGE_LEFT + TOP_LEDGE_RIGHT) / 2, y: TOP_Y + 16, width: TOP_LEDGE_RIGHT - TOP_LEDGE_LEFT, height: 32 },
 
-    // Stairs from top down to Level A (visual assist)
-    { x: 120, y: TOP_Y + 60, width: 60, height: 40 },
-    { x: 140, y: TOP_Y + 120, width: 60, height: 40 },
+    // Stairs from top down to Level A — styled as chimneys
+    { x: 120, y: TOP_Y + 60, width: 60, height: 40, style: 'chimney' },
+    { x: 140, y: TOP_Y + 120, width: 60, height: 40, style: 'chimney' },
 
     // LEVEL A (mid-air platform with E1)
     { x: (LEVEL_A_LEFT + LEVEL_A_RIGHT) / 2, y: LEVEL_A + 16, width: LEVEL_A_RIGHT - LEVEL_A_LEFT, height: 32 },
@@ -116,10 +116,10 @@ export const LEVEL_05 = {
     // Tower platform at Level B (support for elevator)
     { x: LEVEL_B_PLATFORM_LEFT + (LEVEL_B_PLATFORM_RIGHT - LEVEL_B_PLATFORM_LEFT) / 2, y: LEVEL_B + 16, width: LEVEL_B_PLATFORM_RIGHT - LEVEL_B_PLATFORM_LEFT, height: 32 },
 
-    // Stairs from top down (alternative path)
-    { x: STAIRS_C_X, y: LEVEL_A + 80, width: 60, height: 40 },
-    { x: STAIRS_C_X, y: LEVEL_A + 140, width: 60, height: 40 },
-    { x: STAIRS_C_X, y: LEVEL_C - 40, width: 60, height: 40 },
+    // Stairs from top down (alternative path) — styled as rooftop objects
+    { x: STAIRS_C_X, y: LEVEL_A + 80, width: 60, height: 40, style: 'crate' },
+    { x: STAIRS_C_X, y: LEVEL_A + 140, width: 60, height: 40, style: 'ac_unit' },
+    { x: STAIRS_C_X, y: LEVEL_C - 40, width: 60, height: 40, style: 'vent_box' },
 
     // LEVEL C (main mid-platform, accessible via elevator or stairs)
     { x: 400, y: LEVEL_C + 16, width: 300, height: 32 },
@@ -323,4 +323,90 @@ export const LEVEL_05 = {
 
   // ── Goal ───────────────────────────────────────────────
   goal: { x: GOAL_X, y: GOAL_Y },
+
+  // ── Midground Buildings ────────────────────────────────
+  midgroundBuildings: [
+    // Tall left tower (spans full descent)
+    {
+      x: 16, y: TOP_Y + 32, width: 140, height: 1000, color: 0x161630,
+      roofDetails: [
+        { type: 'antenna', offsetX: 70 },
+        { type: 'pipes', offsetX: 10, width: 25 },
+      ],
+    },
+    // Left-center building (behind stair / drawbridge area)
+    {
+      x: 250, y: LEVEL_B + 32, width: 180, height: 700, color: 0x14142e,
+      roofDetails: [
+        { type: 'ac', offsetX: 20 },
+        { type: 'tank', offsetX: 100 },
+        { type: 'fire_escape', offsetX: 0, width: 18 },
+      ],
+    },
+    // Center tower (behind elevator tower at Level B)
+    {
+      x: 640, y: LEVEL_A + 32, width: 200, height: 800, color: 0x1e1e3c,
+      roofDetails: [
+        { type: 'antenna', offsetX: 30 },
+        { type: 'dish', offsetX: 150 },
+        { type: 'neon_sign', offsetX: 60, offsetY: 80, width: 35, neonColor: 0xff4488 },
+      ],
+    },
+    // Under Level C right section
+    {
+      x: 600, y: LEVEL_C + 32, width: 280, height: 550, color: 0x171734,
+      roofDetails: [
+        { type: 'ac', offsetX: 30 },
+        { type: 'ac', offsetX: 180 },
+        { type: 'pipes', offsetX: 100, width: 40 },
+      ],
+    },
+    // Right-side building (under Level D and lower)
+    {
+      x: 1000, y: LEVEL_B + 32, width: 200, height: 700, color: 0x191838,
+      roofDetails: [
+        { type: 'tank', offsetX: 50 },
+        { type: 'antenna', offsetX: 150 },
+        { type: 'awning', offsetX: 30, offsetY: 100, width: 28, color: 0x442233 },
+      ],
+    },
+    // Far-right tall tower
+    {
+      x: 1260, y: TOP_Y + 32, width: 130, height: 1000, color: 0x1c1c3a,
+      roofDetails: [
+        { type: 'antenna', offsetX: 65 },
+        { type: 'tank', offsetX: 20 },
+      ],
+    },
+    // Wide building under floor level
+    {
+      x: 400, y: FLOOR_Y + 32, width: 500, height: 400, color: 0x14142e,
+      roofDetails: [
+        { type: 'ac', offsetX: 40 },
+        { type: 'dish', offsetX: 200 },
+        { type: 'ac', offsetX: 350 },
+        { type: 'pipes', offsetX: 440, width: 30 },
+      ],
+    },
+    // Building under floor level, right side
+    {
+      x: 1050, y: FLOOR_Y + 32, width: 250, height: 350, color: 0x1e1e3c,
+      roofDetails: [
+        { type: 'tank', offsetX: 60 },
+        { type: 'neon_sign', offsetX: 120, offsetY: 50, width: 30, neonColor: 0x22ff88 },
+      ],
+    },
+  ],
+
+  // ── Lampposts ──────────────────────────────────────────
+  lampposts: [
+    { x: 500, y: FLOOR_Y },
+    { x: 1100, y: FLOOR_Y },
+  ],
+
+  // ── Decorations (atmospheric only) ─────────────────────
+  decorations: [
+    { type: 'steam_vent', x: 900, y: FLOOR_Y },
+    { type: 'puddle', x: 1200, y: FLOOR_Y, width: 30 },
+  ],
 };

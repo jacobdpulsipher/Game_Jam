@@ -14,6 +14,31 @@ import { Drawbridge } from '../puzzles/Drawbridge.js';
 import { getLevelById, getFirstLevel, getNextLevel } from '../levels/LevelRegistry.js';
 import { GeneratorSystem } from '../systems/GeneratorSystem.js';
 import { music } from '../audio/ProceduralMusic.js';
+import {
+  generateDumpsterPlatform,
+  generateChimneyPlatform,
+  generateACUnitPlatform,
+  generateVentBoxPlatform,
+  generateCratePlatform,
+} from '../assets/EnvironmentTextures.js';
+
+/** Map of style names to texture generator functions. */
+const STYLE_GENERATORS = {
+  dumpster: generateDumpsterPlatform,
+  chimney:  generateChimneyPlatform,
+  ac_unit:  generateACUnitPlatform,
+  vent_box: generateVentBoxPlatform,
+  crate:    generateCratePlatform,
+};
+
+/** Minimum visual height for each platform style (the visual extends below the walkable surface). */
+const STYLE_MIN_HEIGHTS = {
+  dumpster: 32,
+  chimney:  40,
+  ac_unit:  28,
+  vent_box: 20,
+  crate:    32,
+};
 
 /**
  * GameScene — data-driven level builder.
@@ -64,6 +89,12 @@ export class GameScene extends Phaser.Scene {
     // ── Midground Buildings (decorative layer between backdrop and gameplay) ──
     this._drawMidgroundBuildings(data);
 
+    // ── Lampposts (decorative light posts) ──
+    this._drawLampposts(data);
+
+    // ── Atmospheric Effects (puddles, steam vents) ──
+    this._drawAtmosphericEffects(data);
+
     // Lookup maps so terminals can reference doors/elevators by id
     this._elementsById = {};
 
@@ -73,9 +104,30 @@ export class GameScene extends Phaser.Scene {
     // ── Platforms ──
     this.platforms = this.physics.add.staticGroup();
     for (const p of data.platforms) {
-      const ts = this.add.tileSprite(p.x, p.y, p.width, p.height, 'ground');
-      this.physics.add.existing(ts, true); // true = static body
-      this.platforms.add(ts);
+      if (p.style && STYLE_GENERATORS[p.style]) {
+        // Styled platform — render as a rooftop object (dumpster, chimney, etc.)
+        const visualH = Math.max(p.height, STYLE_MIN_HEIGHTS[p.style] || p.height);
+        const genFn = STYLE_GENERATORS[p.style];
+        const texKey = genFn(this, p.width, visualH);
+
+        // Walk surface Y = top edge of the original platform rect
+        const surfaceY = p.y - p.height / 2;
+
+        // Invisible physics zone at the original platform position
+        const zone = this.add.zone(p.x, p.y, p.width, p.height);
+        this.physics.add.existing(zone, true);
+        this.platforms.add(zone);
+
+        // Visual image — origin top-center, extends downward from walkable surface
+        const visual = this.add.image(p.x, surfaceY, texKey);
+        visual.setOrigin(0.5, 0);
+        visual.setDepth(0); // same depth as gameplay
+      } else {
+        // Default ground tileSprite
+        const ts = this.add.tileSprite(p.x, p.y, p.width, p.height, 'ground');
+        this.physics.add.existing(ts, true);
+        this.platforms.add(ts);
+      }
     }
 
     // ── Generators ──
@@ -522,45 +574,115 @@ export class GameScene extends Phaser.Scene {
     // Stars (small dots)
     g.fillStyle(0xffffff, 0.4);
     const starSeed = worldW * 7;
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 60; i++) {
       const sx = ((starSeed * (i + 1) * 13) % (worldW * 2));
-      const sy = ((starSeed * (i + 1) * 7) % (worldH * 0.4));
-      g.fillCircle(sx, sy, Math.random() > 0.7 ? 1.5 : 0.8);
+      const sy = ((starSeed * (i + 1) * 7) % (worldH * 0.35));
+      const sz = ((i * 31) % 5 < 1) ? 1.5 : 0.8;
+      g.fillStyle(0xffffff, 0.25 + ((i * 17) % 3) * 0.1);
+      g.fillCircle(sx, sy, sz);
     }
 
-    // Background buildings (far layer — darker, smaller)
-    const farColor = 0x0e0e1a;
-    const farBuildings = Math.floor(worldW / 60) + 4;
+    // Far horizon glow (subtle city light pollution)
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle(0x1a1428, 0.06 - i * 0.008);
+      g.fillRect(0, worldH - 180 - i * 30, worldW * 3, 50);
+    }
+
+    // Background buildings (far layer — darker, smaller, denser)
+    const farColors = [0x0e0e1a, 0x0c0c18, 0x101020, 0x0d0d1c];
+    const farBuildings = Math.floor(worldW / 40) + 6;
     for (let i = 0; i < farBuildings; i++) {
-      const bx = i * 60 - 30 + ((i * 37) % 20);
-      const bh = 80 + ((i * 73) % 120);
-      const bw = 30 + ((i * 41) % 30);
-      g.fillStyle(farColor, 0.9);
-      g.fillRect(bx, worldH - bh - 100, bw, bh);
+      const bx = i * 40 - 30 + ((i * 37) % 20);
+      const bh = 60 + ((i * 73) % 140);
+      const bw = 22 + ((i * 41) % 35);
+      const fc = farColors[i % farColors.length];
+      g.fillStyle(fc, 0.9);
+      g.fillRect(bx, worldH - bh - 100, bw, bh + 100);
       // Dark windows
       g.fillStyle(0x0a0a12, 1);
-      for (let wy = worldH - bh - 90; wy < worldH - 110; wy += 12) {
+      for (let wy = worldH - bh - 90; wy < worldH - 110; wy += 10) {
+        for (let wx = bx + 3; wx < bx + bw - 3; wx += 6) {
+          g.fillRect(wx, wy, 2, 3);
+        }
+      }
+      // Occasional lit window
+      g.fillStyle(0x221a00, 0.4);
+      const litY = worldH - bh - 90 + ((i * 19) % (bh - 30));
+      const litX = bx + 4 + ((i * 7) % Math.max(bw - 10, 1));
+      g.fillRect(litX, litY, 2, 3);
+    }
+
+    // Mid-distance buildings (between far and near — more detail, variety)
+    const midColors = [0x111122, 0x0f0f20, 0x12121e, 0x131326];
+    const midBuildings = Math.floor(worldW / 55) + 5;
+    for (let i = 0; i < midBuildings; i++) {
+      const bx = i * 55 + ((i * 43) % 25) - 15;
+      const bh = 90 + ((i * 89) % 180);
+      const bw = 35 + ((i * 51) % 45);
+      const mc = midColors[i % midColors.length];
+      g.fillStyle(mc, 0.95);
+      g.fillRect(bx, worldH - bh - 80, bw, bh + 80);
+      // Windows — some dim, occasional lit
+      for (let wy = worldH - bh - 70; wy < worldH - 90; wy += 12) {
         for (let wx = bx + 4; wx < bx + bw - 4; wx += 8) {
+          const hash = (wx * 5 + wy * 3 + i) % 17;
+          const isLit = hash < 2;
+          g.fillStyle(isLit ? 0x2a1a00 : 0x090914, isLit ? 0.5 : 1);
           g.fillRect(wx, wy, 3, 4);
         }
       }
+      // Rooftop detail for taller buildings
+      if (bh > 140 && ((i * 13) % 3 === 0)) {
+        g.fillStyle(0x161628, 1);
+        g.fillRect(bx + bw / 2 - 6, worldH - bh - 80 - 8, 12, 8);
+        // Antenna
+        g.lineStyle(1, 0x1a1a2e, 0.7);
+        g.beginPath();
+        g.moveTo(bx + bw / 2, worldH - bh - 88);
+        g.lineTo(bx + bw / 2, worldH - bh - 110);
+        g.strokePath();
+        g.fillStyle(0xff2200, 0.35);
+        g.fillCircle(bx + bw / 2, worldH - bh - 110, 1.5);
+      }
     }
 
-    // Foreground buildings (near layer — slightly lighter silhouettes)
+    // Foreground buildings (near layer — slightly lighter silhouettes, denser)
     const nearColor = 0x151525;
-    const nearBuildings = Math.floor(worldW / 80) + 3;
+    const nearColors = [0x151525, 0x161630, 0x141428, 0x171730];
+    const nearBuildings = Math.floor(worldW / 60) + 5;
     for (let i = 0; i < nearBuildings; i++) {
-      const bx = i * 80 + ((i * 53) % 30) - 20;
-      const bh = 100 + ((i * 97) % 160);
-      const bw = 40 + ((i * 61) % 40);
-      g.fillStyle(nearColor, 0.95);
-      g.fillRect(bx, worldH - bh - 60, bw, bh);
+      const bx = i * 60 + ((i * 53) % 30) - 20;
+      const bh = 100 + ((i * 97) % 180);
+      const bw = 40 + ((i * 61) % 50);
+      const nc = nearColors[i % nearColors.length];
+      g.fillStyle(nc, 0.95);
+      g.fillRect(bx, worldH - bh - 60, bw, bh + 60);
       // Windows — some lit (dim yellow), most dark
       for (let wy = worldH - bh - 50; wy < worldH - 70; wy += 14) {
         for (let wx = bx + 5; wx < bx + bw - 5; wx += 10) {
-          const isLit = ((wx * 3 + wy * 7) % 11) < 2; // ~18% chance lit
+          const isLit = ((wx * 3 + wy * 7) % 11) < 2;
           g.fillStyle(isLit ? 0x332200 : 0x0a0a18, isLit ? 0.6 : 1);
           g.fillRect(wx, wy, 4, 5);
+        }
+      }
+      // Fire escape on some near buildings
+      if (bh > 120 && ((i * 7) % 3 === 0)) {
+        const feX = bx + bw - 2;
+        g.lineStyle(1, 0x1e1e30, 0.6);
+        for (let fy = worldH - bh - 40; fy < worldH - 70; fy += 28) {
+          // Platform
+          g.fillStyle(0x1a1a2c, 0.7);
+          g.fillRect(feX, fy, 10, 2);
+          // Railing
+          g.beginPath();
+          g.moveTo(feX + 10, fy);
+          g.lineTo(feX + 10, fy - 8);
+          g.strokePath();
+          // Ladder to next
+          g.beginPath();
+          g.moveTo(feX + 4, fy + 2);
+          g.lineTo(feX + 4, fy + 28);
+          g.strokePath();
         }
       }
     }
@@ -681,9 +803,159 @@ export class GameScene extends Phaser.Scene {
             g.beginPath();
             g.arc(dx + 6, by - 10, 7, -0.4, Math.PI + 0.4, false);
             g.strokePath();
+          } else if (d.type === 'fire_escape') {
+            // Metal fire escape with platforms and ladders
+            const feX = dx;
+            const feW = d.width || 18;
+            g.lineStyle(1, 0x2a2a48, 0.8);
+            for (let fy = by + 30; fy < by + bh - 20; fy += 36) {
+              // Platform
+              g.fillStyle(0x222244, 0.7);
+              g.fillRect(feX, fy, feW, 2);
+              // Railing
+              g.beginPath();
+              g.moveTo(feX + feW, fy);
+              g.lineTo(feX + feW, fy - 10);
+              g.strokePath();
+              g.beginPath();
+              g.moveTo(feX, fy);
+              g.lineTo(feX, fy - 10);
+              g.strokePath();
+              // Ladder rungs
+              for (let ly = fy + 6; ly < fy + 34 && ly < by + bh - 20; ly += 7) {
+                g.fillStyle(0x2a2a48, 0.5);
+                g.fillRect(feX + 3, ly, feW - 6, 1);
+              }
+            }
+          } else if (d.type === 'neon_sign') {
+            // Small neon sign on building front
+            const signW = d.width || 30;
+            const signH = 10;
+            const signY = by + (d.offsetY || 50);
+            // Dark backing
+            g.fillStyle(0x111122, 0.9);
+            g.fillRect(dx, signY, signW, signH);
+            // Neon glow (pinkish or cyan)
+            const neonColor = d.neonColor || 0xff2266;
+            g.fillStyle(neonColor, 0.15);
+            g.fillRect(dx - 4, signY - 3, signW + 8, signH + 6);
+            g.fillStyle(neonColor, 0.4);
+            g.fillRect(dx + 2, signY + 2, signW - 4, signH - 4);
+            // Text-like bars
+            g.fillStyle(neonColor, 0.7);
+            g.fillRect(dx + 4, signY + 3, 6, 2);
+            g.fillRect(dx + 12, signY + 3, 4, 2);
+            g.fillRect(dx + 18, signY + 5, 5, 2);
+          } else if (d.type === 'awning') {
+            // Store awning/canopy
+            const awnW = d.width || 30;
+            const awnH = 8;
+            const awnY = by + (d.offsetY || 60);
+            g.fillStyle(d.color || 0x553322, 0.8);
+            g.fillTriangle(dx, awnY, dx + awnW, awnY, dx + awnW / 2, awnY + awnH);
+            g.fillRect(dx, awnY - 1, awnW, 2);
+          } else if (d.type === 'pipes') {
+            // Exposed pipes running down the building side
+            const pipeX = dx;
+            const pipeH = d.height || (bh - 20);
+            const pipeW = d.width || 20;
+            // Vertical pipes
+            g.lineStyle(2, 0x303050, 0.7);
+            g.beginPath();
+            g.moveTo(pipeX + 3, by + 6);
+            g.lineTo(pipeX + 3, by + pipeH);
+            g.strokePath();
+            g.lineStyle(1.5, 0x2a2a44, 0.6);
+            g.beginPath();
+            g.moveTo(pipeX + pipeW - 4, by + 10);
+            g.lineTo(pipeX + pipeW - 4, by + pipeH - 10);
+            g.strokePath();
+            // Horizontal connector
+            g.lineStyle(1.5, 0x303050, 0.5);
+            g.beginPath();
+            g.moveTo(pipeX + 3, by + pipeH * 0.4);
+            g.lineTo(pipeX + pipeW - 4, by + pipeH * 0.4);
+            g.strokePath();
+            // Pipe joints (small circles)
+            g.fillStyle(0x3a3a58, 0.7);
+            g.fillCircle(pipeX + 3, by + 6, 2);
+            g.fillCircle(pipeX + 3, by + pipeH, 2);
+            g.fillCircle(pipeX + pipeW - 4, by + 10, 1.5);
           }
         }
       }
+    }
+  }
+
+  /** Draw decorative lampposts at positions specified in level data. */
+  _drawLampposts(data) {
+    if (!data.lampposts?.length) return;
+
+    for (const lp of data.lampposts) {
+      // Lamppost sprite — sits at ground level, so origin-bottom
+      const post = this.add.image(lp.x, lp.y, 'lamppost');
+      post.setOrigin(0.5, 1); // origin at bottom-center
+      post.setDepth(-2);      // behind gameplay, in front of midground
+
+      // Glow overlay — positioned under the lamp head
+      const glow = this.add.image(lp.x + 4, lp.y - 80, 'lamppost_glow');
+      glow.setOrigin(0.5, 0);
+      glow.setDepth(-2);
+      glow.setAlpha(0.6);
+      glow.setScale(1.5, 2.0); // stretch the cone downward
+
+      // Subtle pulsing glow animation
+      this.tweens.add({
+        targets: glow,
+        alpha: { from: 0.5, to: 0.7 },
+        duration: 1500 + ((lp.x * 7) % 800),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+  }
+
+  /**
+   * Draw atmospheric environmental effects — only puddles and steam vents.
+   * These are subtle, non-obstructive and add ambiance without clutter.
+   */
+  _drawAtmosphericEffects(data) {
+    if (!data.decorations?.length) return;
+
+    const g = this.add.graphics();
+    g.setDepth(-1);
+
+    for (const d of data.decorations) {
+      const dx = d.x;
+      const dy = d.y;
+      if (d.type === 'puddle') {
+        // Dark reflective puddle on ground
+        g.fillStyle(0x1a1a2e, 0.6);
+        g.fillEllipse(dx, dy, d.width || 30, 4);
+        g.fillStyle(0x2a2a44, 0.3);
+        g.fillEllipse(dx, dy, (d.width || 30) * 0.6, 2);
+      } else if (d.type === 'steam_vent') {
+        // Steam/smoke rising effect drawn as stacked transparent circles
+        g.fillStyle(0x888899, 0.05);
+        for (let i = 0; i < 5; i++) {
+          const vy = dy - 8 - i * 12;
+          const vr = 4 + i * 3;
+          g.fillCircle(dx + ((i * 3) % 5) - 2, vy, vr);
+        }
+        // Vent grate on ground
+        g.fillStyle(0x333333, 0.8);
+        g.fillRect(dx - 8, dy - 2, 16, 3);
+        g.lineStyle(0.5, 0x444444, 0.5);
+        for (let lx = dx - 6; lx <= dx + 6; lx += 3) {
+          g.beginPath();
+          g.moveTo(lx, dy - 2);
+          g.lineTo(lx, dy + 1);
+          g.strokePath();
+        }
+      }
+      // All other decoration types (barrel, trashcan, crate_stack, chain_fence)
+      // are intentionally removed — platforms now USE styled textures instead.
     }
   }
 
@@ -695,15 +967,36 @@ export class GameScene extends Phaser.Scene {
   _showTutorial(data) {
     this._dismissTutorial();
 
+    const portraitKey = data.portraitKey;
+    const hasPortrait = !!portraitKey && this.textures.exists(portraitKey);
+    const speakerName = data.speakerName || 'MENTOR';
+
     // Top-left position, compact box
     const margin = 12;
     const lineH = 20;
     const padding = 14;
     const titleH = 28;
-    const boxW = 340;
-    const boxH = titleH + padding + data.lines.length * lineH + padding;
+    const portraitTarget = 64;
+    let portraitW = 0;
+    let portraitH = 0;
+    let portraitScale = 0;
+    if (hasPortrait) {
+      const src = this.textures.get(portraitKey).getSourceImage();
+      const srcW = src?.width || portraitTarget;
+      const srcH = src?.height || portraitTarget;
+      portraitScale = Math.min(portraitTarget / srcW, portraitTarget / srcH);
+      portraitW = Math.round(srcW * portraitScale);
+      portraitH = Math.round(srcH * portraitScale);
+    }
+    const portraitGap = hasPortrait ? 10 : 0;
+
+    const boxW = hasPortrait ? 420 : 340;
+    const contentH = titleH + padding + data.lines.length * lineH + padding;
+    const boxH = Math.max(contentH, titleH + padding + portraitH + padding);
     const boxX = margin;
     const boxY = margin;
+
+    const contentX = boxX + padding + (hasPortrait ? (portraitW + portraitGap) : 0);
 
     // Panel background
     const panel = this.add.graphics().setScrollFactor(0).setDepth(501);
@@ -717,19 +1010,52 @@ export class GameScene extends Phaser.Scene {
     panel.fillStyle(0x00aaff, 0.7);
     panel.fillRect(boxX + 12, boxY + 4, boxW - 24, 2);
 
+    // Optional portrait panel
+    let portrait = null;
+    if (hasPortrait) {
+      const px = boxX + padding;
+      const py = boxY + titleH + padding;
+
+      // Portrait backing
+      panel.fillStyle(0x000000, 0.25);
+      panel.fillRoundedRect(px - 6, py - 6, portraitW + 12, portraitH + 12, 6);
+      panel.fillStyle(0x00aaff, 0.25);
+      panel.fillRoundedRect(px - 4, py - 4, portraitW + 8, portraitH + 8, 6);
+
+      portrait = this.add.image(px, py, portraitKey)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(502)
+        .setScale(portraitScale);
+      // Keep it crisp
+      if (portrait.setPipeline) {
+        // no-op; Phaser will keep pixelArt crisp via game config
+      }
+    }
+
     // Title text
-    const title = this.add.text(boxX + padding, boxY + 12, data.title, {
+    const title = this.add.text(contentX, boxY + 12, data.title, {
       fontSize: '16px',
       fontFamily: 'monospace',
       color: '#44ddff',
       fontStyle: 'bold',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(502);
 
+    // Radio label (top-right)
+    let radioLabel = null;
+    if (hasPortrait) {
+      radioLabel = this.add.text(boxX + boxW - padding, boxY + 14, `RADIO: ${speakerName}`.toUpperCase(), {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#44ddff',
+      }).setOrigin(1, 0).setScrollFactor(0).setDepth(502);
+    }
+
     // Body lines
     const bodyTexts = [];
     const bodyStartY = boxY + titleH + padding;
     for (let i = 0; i < data.lines.length; i++) {
-      const t = this.add.text(boxX + padding, bodyStartY + i * lineH, data.lines[i], {
+      const t = this.add.text(contentX, bodyStartY + i * lineH, data.lines[i], {
         fontSize: '13px',
         fontFamily: 'monospace',
         color: '#ccccdd',
@@ -739,17 +1065,19 @@ export class GameScene extends Phaser.Scene {
 
     // Store references for cleanup
     this._activeTutorial = {
-      _tutId: data.id, panel, title, bodyTexts,
+      _tutId: data.id, panel, title, radioLabel, portrait, bodyTexts,
     };
   }
 
   /** Dismiss the active tutorial hint. */
   _dismissTutorial() {
     if (!this._activeTutorial) return;
-    const { panel, title, bodyTexts } = this._activeTutorial;
+    const { panel, title, radioLabel, portrait, bodyTexts } = this._activeTutorial;
 
     if (panel) panel.destroy();
     if (title) title.destroy();
+    if (radioLabel) radioLabel.destroy();
+    if (portrait) portrait.destroy();
     if (bodyTexts) bodyTexts.forEach(t => t.destroy());
 
     this._activeTutorial = null;

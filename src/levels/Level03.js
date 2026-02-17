@@ -164,4 +164,55 @@ export const LEVEL_03 = {
   ],
 
   goal: { x: G2_X, y: FLOOR_Y - 40 },
+
+  // ── Midground Buildings ────────────────────────────────
+  midgroundBuildings: [
+    // Behind generator / player area
+    {
+      x: 30, y: FLOOR_Y + 32, width: 180, height: 200, color: 0x161630,
+      roofDetails: [
+        { type: 'tank', offsetX: 50 },
+        { type: 'pipes', offsetX: 120, width: 25 },
+      ],
+    },
+    // Behind elevator area
+    {
+      x: 370, y: FLOOR_Y + 32, width: 150, height: 180, color: 0x14142e,
+      roofDetails: [
+        { type: 'ac', offsetX: 15 },
+        { type: 'dish', offsetX: 100 },
+      ],
+    },
+    // Behind heavy block / barrier area
+    {
+      x: 530, y: FLOOR_Y + 32, width: 190, height: 200, color: 0x1e1e3c,
+      roofDetails: [
+        { type: 'fire_escape', offsetX: 0, width: 18 },
+        { type: 'ac', offsetX: 80 },
+        { type: 'antenna', offsetX: 150 },
+      ],
+    },
+    // Behind door / goal area
+    {
+      x: 850, y: FLOOR_Y + 32, width: 230, height: 190, color: 0x191838,
+      roofDetails: [
+        { type: 'tank', offsetX: 30 },
+        { type: 'neon_sign', offsetX: 100, offsetY: 40, width: 30, neonColor: 0x44aaff },
+        { type: 'pipes', offsetX: 180, width: 30 },
+      ],
+    },
+  ],
+
+  // ── Lampposts ──────────────────────────────────────────
+  lampposts: [
+    { x: 250, y: FLOOR_Y },
+    { x: 670, y: FLOOR_Y },
+    { x: 950, y: FLOOR_Y },
+  ],
+
+  // ── Decorations (atmospheric only) ─────────────────────
+  decorations: [
+    { type: 'puddle', x: 760, y: FLOOR_Y, width: 25 },
+    { type: 'steam_vent', x: 960, y: FLOOR_Y },
+  ],
 };
