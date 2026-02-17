@@ -59,12 +59,18 @@ Hero is an electrician who connects extension cords from generators to terminals
 - [x] Created `src/audio/ProceduralMusic.js` — Web Audio API chiptune synth (menu/level/victory tracks)
 - [x] Wired music into MenuScene (playMenu on interaction) and GameScene (playLevel, playVictory)
 
-## Levels 3 & 4
-- [x] Created `src/levels/Level03.js` — "Power Cascade" (medium difficulty, trigger zones, cascading activations)
-- [x] Created `src/levels/Level04.js` — "Tower Descent" (hard, tall vertical level, multiple routes, chained elevators)
-- [x] Updated `LevelRegistry.js` to include all 4 levels with proper chaining
+## Levels 3–5
+- [x] Created `src/levels/Level03.js` — "Dead Weight" (medium difficulty, heavy block + push block barrier puzzle)
+- [x] Created `src/levels/Level04.js` — "Power Climb" (staircase ascent, block transport, E-key generator activation)
+- [x] Created `src/levels/Level05.js` — "Tower Descent" (hard, tall vertical level, multiple routes, chained elevators)
+- [x] Updated `LevelRegistry.js` to include all 5 levels with proper chaining
 - [x] Created `src/systems/TriggerZone.js` — invisible zones that auto-activate elements on player overlap
 - [x] Created `src/systems/GeneratorSystem.js` — manages generators, element registration, auto-activation
+
+## Level 4 — "Power Climb" Features
+- [x] E-key activation of secondary generators (no cord required) — added to `GameScene._handleAction()`
+- [x] Permanent power: generator-linked elevators set `_permanentlyPowered = true`, blocking `deactivate()`
+- [x] Generator activation check runs before cord-connected early return so it works even with cord plugged in
 
 ## Bug Fixes (Round 2 — Runtime Issues)
 - [x] Fix: Black screen — `TriggerZone` extended non-existent `Phaser.Physics.Arcade.Zone` → changed to `Phaser.GameObjects.Zone`
@@ -164,8 +170,8 @@ src/
 │   ├── LevelTutorial.js # "Tutorial" — guided walkthrough with popup hints
 │   ├── Level01.js       # "First Steps" — intro
 │   ├── Level02.js       # "Bridge the Gap" — drawbridge + spikes
-│   ├── Level03.js       # "Dead Weight" — trigger zones + cascading
-│   ├── Level04.js       # "Power Climb" — vertical, multi-route, hard
+│   ├── Level03.js       # "Dead Weight" — heavy block barrier puzzle
+│   ├── Level04.js       # "Power Cascade" — trigger zones + cascading
 │   └── Level05.js       # "Tower Descent" — tall vertical descent
 ├── systems/
 │   ├── ConnectionSystem.js  # Connection propagation

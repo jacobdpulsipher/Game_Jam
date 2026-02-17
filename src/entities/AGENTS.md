@@ -11,6 +11,7 @@ Entities are game objects with behavior — things that exist in the world and d
 | `Terminal.js`     | Plug point on a puzzle element. Player presses E near it to connect/disconnect the cord. When powered, calls `linkedElement.activate()`; when unpowered, calls `linkedElement.deactivate()`. |
 | `ExtensionCord.js`| Visual-only — draws a droopy bezier cord from the generator to either the connected terminal or the player. Also provides `isInRange(terminal)` for range checks. |
 | `Spikes.js`       | Hazard zone — a row of procedural spike triangles. Kills the player on overlap. Can be neutralised when a PushBlock covers them (`neutralise()` disables body + fades visual). |
+| `HeavyBlock.js`   | Gravity-following wall the player CANNOT push or grab. Dynamic body with `pushable = false`, `maxVelocityX = 0`. Has a `topPlatform` (thin static body on top for standing) and a `skirt` (visible 48px-tall static body below, industrial gray, blocks horizontal passage). When its support (e.g. a PushBlock) is removed, it falls to the next surface. |
 | `Enemy.js`        | Patrolling hazard — a small enemy that walks left and right between configurable patrol boundaries. Kills the player on touch (same as spikes). Can only be killed by the extension cord plug when the cord is NOT connected to a terminal. Short enough (32×32) for the hero to jump over. |
 
 ## Key Behaviors
@@ -24,8 +25,12 @@ Entities are game objects with behavior — things that exist in the world and d
 - Collides with world bounds
 
 ### Generator
-- Static body, no behavior — just a visual anchor for the extension cord
+- Two types: **PRIMARY** (`isPrimary: true`, default) — hero carries cord from this to terminals; **SECONDARY** (`isPrimary: false`) — auto-activates linked elements when triggered
+- Secondary generators are activated by pressing E nearby (no cord required) or by trigger zones
+- `autoActivateIds` — list of element IDs that are permanently powered when the generator activates
+- Linked elements get `_permanentlyPowered = true`, preventing terminal-based `deactivate()`
 - `setLabel(text)` to change the overhead label
+- `activate(elementsById)` / `deactivate(elementsById)` / `toggle(elementsById)` — secondary only
 
 ### Terminal
 - `linkTo(element)` — wire to a puzzle element
@@ -41,6 +46,14 @@ Entities are game objects with behavior — things that exist in the world and d
 - `isDangerous` getter — true unless neutralised
 - `neutralise()` — disable body, fade to 30% alpha (called when block covers them)
 - `reactivate()` — re-enable (unused in current levels)
+
+### HeavyBlock
+- **Body:** Dynamic, `pushable = false`, `maxVelocityX = 0`, gravity-enabled
+- **topPlatform:** Thin static body on top — player can stand on it
+- **skirt:** 48px-tall visible static body below (color `0x445566`, stroke `0x334455`) — fills gap between block bottom and floor, blocking horizontal passage. `checkCollision.up/down = false` so it doesn't interfere with jumping over the dropped block
+- **syncPosition():** Called every frame to keep topPlatform, skirt, and label in sync
+- **Procedural texture:** Steel panel with hazard stripes, rivets, beveled edges
+- **Level data:** `{ id, x, y, width?, height? }`
 
 ### Enemy
 - **Patrol:** Walks between `rangeLeft` and `rangeRight` at configurable `speed` (default: ENEMY.SPEED = 80 px/s)

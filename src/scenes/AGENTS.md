@@ -24,6 +24,7 @@ BootScene → PreloadScene → MenuScene → GameScene (+ UIScene overlay)
 - Platforms use `physics.add.staticGroup()` with display-sized sprites
 - Puzzle elements use options-object constructors (see `src/puzzles/AGENTS.md`)
 - Events: `player-action` (E key), `player-interact` (F key), `door-closing-tick`, `cord-changed`
+- E key priority: (1) activate nearby secondary generator, (2) unplug cord if connected & in range, (3) plug into nearest terminal, (4) attack with plug
 - Camera follows player with world bounds set from `data.world.width` × `data.world.height`
 - On goal reached: checks `data.nextLevel` — restarts scene with next level or shows win screen
 - Victory sequence: 3 wrench strikes → `_showVictory()` → floodlights (`_spawnFloodlights`) + building window illumination (`_illuminateWindows`) fade in over 1.5s → victory music + text overlay

@@ -8,7 +8,7 @@ Systems operate across multiple entities and puzzle elements, providing coordina
 |-----------------------|-------------|
 | `ConnectionSystem.js` | **The core "Everything is connected" mechanic.** Listens for trigger events and propagates activation/deactivation to linked puzzle elements. |
 | `PuzzleManager.js`    | Factory that instantiates puzzle element classes. Maintains a registry of all puzzle elements by ID. |
-| `GeneratorSystem.js`  | Manages generators, element registration, and auto-activation via trigger zones. |
+| `GeneratorSystem.js`  | Manages generators, element registration, and auto-activation. Secondary generators can be activated by E-key press (via GameScene) or trigger zones. Linked elements receive permanent power via `_permanentlyPowered` flag. |
 | `TriggerZone.js`      | Invisible zone (extends `Phaser.GameObjects.Zone`) that auto-activates linked elements when the player overlaps it. Used for cascading puzzle activations in Levels 3-4. |
 
 ## How the ConnectionSystem Works

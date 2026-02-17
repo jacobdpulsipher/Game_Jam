@@ -10,7 +10,7 @@ wired to `Terminal` objects via the extension-cord power system.
 | File             | Element      | Description |
 |------------------|--------------|-------------|
 | `SlideDoor.js`   | Sliding Door | A door that slides open when powered and closes when unpowered. Supports configurable direction (`up`/`down`/`left`/`right`), size, speed, and range. If a PushBlock is underneath when closing, the door props open on the block. |
-| `Elevator.js`    | Elevator     | A platform that cycles between `startY` and `endY` when powered. Returns to `startY` when unpowered. Tracks per-frame `deltaY` so GameScene can carry riders. Configurable size, speed, and pause duration. |
+| `Elevator.js`    | Elevator     | A platform that cycles between `startY` and `endY` when powered. Returns to `startY` when unpowered (unless `_permanentlyPowered` is set by a generator link). Tracks per-frame `deltaY` so GameScene can carry riders. Configurable size, speed, and pause duration. |
 | `PushBlock.js`   | Push Block   | A block with 2.5D behavior — walks through in background, grabs to foreground. Uses a dynamic body with gravity so it falls off edges. Auto-releases grab when block starts falling. Top always acts as a platform. Can prop open doors and cover spikes. |
 | `Drawbridge.js`  | Drawbridge   | A plank that rotates from vertical (closed/hanging down) to horizontal (open/bridge) when powered. Uses a separate static bridgeBody for walkable surface. Configurable width, speed, and direction (`right`/`left`). |
 

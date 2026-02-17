@@ -9,8 +9,8 @@ to build a playable level. This separates level layout (data) from game logic (c
 LevelRegistry.js          — ordered list of all levels + helpers (getAllLevels for level select)
 Level01.js                — "First Steps" (intro)
 Level02.js                — "Bridge the Gap" (drawbridge + spikes)
-Level03.js                — "Dead Weight" (trigger zones + cascading activations)
-Level04.js                — "Power Climb" (vertical, multi-route, hard)
+Level03.js                — "Dead Weight" (heavy block barrier puzzle)
+Level04.js                — "Power Cascade" (trigger zones + cascading activations)
 Level05.js                — "Tower Descent" (tall vertical descent)
 ```
 
@@ -56,6 +56,10 @@ export const LEVEL_01 = {
 
   pushBlocks: [
     { id: 'block1', x, y },
+  ],
+
+  heavyBlocks: [
+    { id: 'hw1', x, y, /* optional: width, height */ },
   ],
 
   drawbridges: [
