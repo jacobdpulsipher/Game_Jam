@@ -171,7 +171,7 @@ src/
 │   ├── Level01.js       # "First Steps" — intro
 │   ├── Level02.js       # "Bridge the Gap" — drawbridge + spikes
 │   ├── Level03.js       # "Dead Weight" — heavy block barrier puzzle
-│   ├── Level04.js       # "Power Cascade" — trigger zones + cascading
+│   ├── Level04.js       # "Power Climb" — staircase, block transport, generator activation
 │   └── Level05.js       # "Tower Descent" — tall vertical descent
 ├── systems/
 │   ├── ConnectionSystem.js  # Connection propagation
