@@ -4,8 +4,8 @@ import Phaser from 'phaser';
  * TouchControls — virtual gamepad rendered inside a Phaser Scene.
  *
  * Layout (landscape phone):
- *   Left side  — D-pad: ◀ ▶ on a row, ▲ (jump) above
- *   Right side — two round buttons: ⚡ Action (D)  🔧 Interact (F)
+ *   Left side  — D-pad: ◀ ▶ (horizontal movement only)
+ *   Right side — three round buttons: ▲ Jump  ⚡ Action (D)  🔧 Interact (F)
  *
  * Exposes a state object that Player reads every frame:
  *   touchControls.state.left / right / up / action / interact
@@ -67,19 +67,20 @@ export class TouchControls {
       DPAD_RADIUS, '▶', 'right', ALPHA, ALPHA_PRESSED,
     );
 
-    // Up / Jump — positioned above the d-pad center
-    this._makeButton(
-      dpadCenterX, dpadCenterY - DPAD_RADIUS * 1.9,
-      DPAD_RADIUS, '▲', 'up', ALPHA, ALPHA_PRESSED,
-    );
-
     // ── ACTION BUTTONS (right side) ──
     const actionX = width - MARGIN - BTN_RADIUS;
     const interactX = actionX - BTN_RADIUS * 2.5;
+    const jumpX = (actionX + interactX) / 2;  // centered above the two
+
+    // Jump (▲) — centered above action cluster
+    this._makeButton(
+      jumpX, height - MARGIN - BTN_RADIUS - BTN_RADIUS * 2.3,
+      BTN_RADIUS, '▲', 'up', ALPHA, ALPHA_PRESSED, 0x44ff44,
+    );
 
     // Action (plug/unplug — "D" key)
     this._makeButton(
-      interactX, height - MARGIN - BTN_RADIUS - BTN_RADIUS * 2.3,
+      interactX, height - MARGIN - BTN_RADIUS,
       BTN_RADIUS, '⚡', 'action', ALPHA, ALPHA_PRESSED, 0xffcc00,
     );
 
