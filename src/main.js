@@ -11,7 +11,7 @@ const mobile = isMobile();
 
 const config = {
   type: Phaser.AUTO,
-  width: mobile ? 512 : GAME_WIDTH,
+  width: mobile ? 680 : GAME_WIDTH,
   height: mobile ? 384 : GAME_HEIGHT,
   parent: 'game-container',
   pixelArt: true,
