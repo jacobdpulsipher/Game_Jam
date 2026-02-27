@@ -488,11 +488,13 @@ export class GameScene extends Phaser.Scene {
     // ── Launch UI ──
     this.scene.launch(SCENES.UI);
 
-    // ── Level name ──
-    this.add.text(GAME_WIDTH / 2, 20,
-      `${data.name}  |  D = cord  |  F = grab  |  Arrows = move  |  Space = jump`, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#888',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+    // ── Level name / controls hint ──
+    const hudText = isMobile()
+      ? `${data.name}  |  ⚡ = cord  |  🔧 = grab  |  D-pad = move`
+      : `${data.name}  |  D = cord  |  F = grab  |  Arrows = move  |  Space = jump`;
+    this.add.text(GAME_WIDTH / 2, 20, hudText, {
+      fontSize: '13px', fontFamily: 'monospace', color: '#888',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
     // ── Music ──
     music.init();

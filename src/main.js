@@ -16,9 +16,9 @@ const config = {
   parent: 'game-container',
   pixelArt: true,
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: mobile ? Phaser.Scale.EXPAND : Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    // On mobile the physical screen is already small — no extra zoom
+    // On mobile, EXPAND fills the screen; on desktop, FIT with 2x zoom
     zoom: mobile ? 1 : 2,
   },
   input: {

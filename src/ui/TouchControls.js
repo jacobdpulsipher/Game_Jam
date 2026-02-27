@@ -44,42 +44,42 @@ export class TouchControls {
   _create() {
     const { width, height } = this.scene.scale;
 
-    // Semi-transparent style constants
-    const ALPHA = 0.30;
-    const ALPHA_PRESSED = 0.55;
-    const BTN_RADIUS = 34;
-    const DPAD_RADIUS = 30;
-    const MARGIN = 20;
+    // Semi-transparent style constants — large enough for thumbs
+    const ALPHA = 0.35;
+    const ALPHA_PRESSED = 0.65;
+    const BTN_RADIUS = 52;
+    const DPAD_RADIUS = 48;
+    const MARGIN = 30;
 
     // ── D-PAD (left side) ──
-    const dpadCenterX = MARGIN + DPAD_RADIUS * 2 + 10;
+    const dpadCenterX = MARGIN + DPAD_RADIUS * 2 + 16;
     const dpadCenterY = height - MARGIN - DPAD_RADIUS * 2;
 
     // Left arrow
     this._makeButton(
-      dpadCenterX - DPAD_RADIUS * 1.6, dpadCenterY,
+      dpadCenterX - DPAD_RADIUS * 1.7, dpadCenterY,
       DPAD_RADIUS, '◀', 'left', ALPHA, ALPHA_PRESSED,
     );
 
     // Right arrow
     this._makeButton(
-      dpadCenterX + DPAD_RADIUS * 1.6, dpadCenterY,
+      dpadCenterX + DPAD_RADIUS * 1.7, dpadCenterY,
       DPAD_RADIUS, '▶', 'right', ALPHA, ALPHA_PRESSED,
     );
 
     // Up / Jump — positioned above the d-pad center
     this._makeButton(
-      dpadCenterX, dpadCenterY - DPAD_RADIUS * 1.8,
+      dpadCenterX, dpadCenterY - DPAD_RADIUS * 1.9,
       DPAD_RADIUS, '▲', 'up', ALPHA, ALPHA_PRESSED,
     );
 
     // ── ACTION BUTTONS (right side) ──
     const actionX = width - MARGIN - BTN_RADIUS;
-    const interactX = actionX - BTN_RADIUS * 2.4;
+    const interactX = actionX - BTN_RADIUS * 2.5;
 
     // Action (plug/unplug — "D" key)
     this._makeButton(
-      interactX, height - MARGIN - BTN_RADIUS - BTN_RADIUS * 2.2,
+      interactX, height - MARGIN - BTN_RADIUS - BTN_RADIUS * 2.3,
       BTN_RADIUS, '⚡', 'action', ALPHA, ALPHA_PRESSED, 0xffcc00,
     );
 
