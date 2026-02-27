@@ -11,14 +11,13 @@ const mobile = isMobile();
 
 const config = {
   type: Phaser.AUTO,
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  width: mobile ? 512 : GAME_WIDTH,
+  height: mobile ? 384 : GAME_HEIGHT,
   parent: 'game-container',
   pixelArt: true,
   scale: {
-    mode: mobile ? Phaser.Scale.EXPAND : Phaser.Scale.FIT,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    // On mobile, EXPAND fills the screen; on desktop, FIT with 2x zoom
     zoom: mobile ? 1 : 2,
   },
   input: {

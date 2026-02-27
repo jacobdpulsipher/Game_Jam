@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../config.js';
+import { SCENES } from '../config.js';
 import { getAllLevels } from '../levels/LevelRegistry.js';
 import { music } from '../audio/ProceduralMusic.js';
 
@@ -12,8 +12,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create() {
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
+    const cx = this.scale.width / 2;
+    const cy = this.scale.height / 2;
 
     // ── Dark city-themed background ──
     this._drawBackground();
@@ -186,19 +186,21 @@ export class MenuScene extends Phaser.Scene {
 
   _drawBackground() {
     const bg = this.add.graphics();
+    const W = this.scale.width;
+    const H = this.scale.height;
     // Night sky gradient
-    for (let y = 0; y < GAME_HEIGHT; y++) {
-      const t = y / GAME_HEIGHT;
+    for (let y = 0; y < H; y++) {
+      const t = y / H;
       const r = Math.floor(10 + t * 16);
       const g = Math.floor(10 + t * 14);
       const b = Math.floor(30 + t * 20);
       bg.fillStyle(Phaser.Display.Color.GetColor(r, g, b));
-      bg.fillRect(0, y, GAME_WIDTH, 1);
+      bg.fillRect(0, y, W, 1);
     }
     // Dim stars
     for (let i = 0; i < 30; i++) {
-      const sx = Math.random() * GAME_WIDTH;
-      const sy = Math.random() * (GAME_HEIGHT * 0.4);
+      const sx = Math.random() * W;
+      const sy = Math.random() * (H * 0.4);
       const brightness = Math.random() * 0.3 + 0.2;
       const grey = Math.floor(brightness * 255);
       bg.fillStyle(Phaser.Display.Color.GetColor(grey, grey, grey + 30));
@@ -208,11 +210,11 @@ export class MenuScene extends Phaser.Scene {
     for (let i = 0; i < 14; i++) {
       const bw = 40 + Math.random() * 70;
       const bh = 80 + Math.random() * 200;
-      const bx = i * (GAME_WIDTH / 14) + Math.random() * 20 - 10;
+      const bx = i * (W / 14) + Math.random() * 20 - 10;
       bg.fillStyle(0x0e0e1a, 0.9);
-      bg.fillRect(bx, GAME_HEIGHT - bh, bw, bh);
+      bg.fillRect(bx, H - bh, bw, bh);
       // Windows
-      for (let wy = GAME_HEIGHT - bh + 8; wy < GAME_HEIGHT - 10; wy += 16) {
+      for (let wy = H - bh + 8; wy < H - 10; wy += 16) {
         for (let wx = bx + 5; wx < bx + bw - 8; wx += 14) {
           if (Math.random() < 0.25) {
             bg.fillStyle(0x443300, 0.4);

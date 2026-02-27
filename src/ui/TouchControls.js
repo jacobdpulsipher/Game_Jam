@@ -44,15 +44,15 @@ export class TouchControls {
   _create() {
     const { width, height } = this.scene.scale;
 
-    // Semi-transparent style constants — large enough for thumbs
+    // Button sizes proportional to viewport — thumb-friendly on mobile
     const ALPHA = 0.35;
     const ALPHA_PRESSED = 0.65;
-    const BTN_RADIUS = 52;
-    const DPAD_RADIUS = 48;
-    const MARGIN = 30;
+    const BTN_RADIUS = Math.round(height * 0.105);   // ~40px at 384h
+    const DPAD_RADIUS = Math.round(height * 0.095);   // ~36px at 384h
+    const MARGIN = Math.round(height * 0.04);          // ~15px at 384h
 
     // ── D-PAD (left side) ──
-    const dpadCenterX = MARGIN + DPAD_RADIUS * 2 + 16;
+    const dpadCenterX = MARGIN + DPAD_RADIUS * 2 + 12;
     const dpadCenterY = height - MARGIN - DPAD_RADIUS * 2;
 
     // Left arrow

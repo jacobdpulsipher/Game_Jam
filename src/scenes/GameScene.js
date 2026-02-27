@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENES, GAME_WIDTH, GAME_HEIGHT, DOOR, PUSH_BLOCK } from '../config.js';
+import { SCENES, DOOR, PUSH_BLOCK } from '../config.js';
 import { Player } from '../entities/Player.js';
 import { Generator } from '../entities/Generator.js';
 import { Terminal } from '../entities/Terminal.js';
@@ -67,7 +67,7 @@ export class GameScene extends Phaser.Scene {
     } catch (e) {
       this.add.text(20, 20, 'ERROR: ' + e.message + '\n' + e.stack, {
         fontSize: '12px', fontFamily: 'monospace', color: '#ff0000',
-        wordWrap: { width: GAME_WIDTH - 40 },
+        wordWrap: { width: this.scale.width - 40 },
       });
     }
   }
@@ -492,7 +492,7 @@ export class GameScene extends Phaser.Scene {
     const hudText = isMobile()
       ? `${data.name}  |  ⚡ = cord  |  🔧 = grab  |  D-pad = move`
       : `${data.name}  |  D = cord  |  F = grab  |  Arrows = move  |  Space = jump`;
-    this.add.text(GAME_WIDTH / 2, 20, hudText, {
+    this.add.text(this.scale.width / 2, 20, hudText, {
       fontSize: '13px', fontFamily: 'monospace', color: '#888',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
@@ -1745,10 +1745,10 @@ export class GameScene extends Phaser.Scene {
    */
   _showToBeContinued() {
     // Dim the screen
-    const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
-    const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+    const cx = this.cameras.main.scrollX + this.scale.width / 2;
+    const cy = this.cameras.main.scrollY + this.scale.height / 2;
 
-    const dimOverlay = this.add.rectangle(cx, cy, GAME_WIDTH + 100, GAME_HEIGHT + 100, 0x000000, 0)
+    const dimOverlay = this.add.rectangle(cx, cy, this.scale.width + 100, this.scale.height + 100, 0x000000, 0)
       .setScrollFactor(0).setDepth(600);
     this.tweens.add({
       targets: dimOverlay, fillAlpha: 0.6, duration: 1200, ease: 'Quad.easeIn',
@@ -1842,8 +1842,8 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(2500, () => {
           this._showTutorial(popup);
           // Show "Press ENTER to continue" prompt below the popup
-          const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
-          const promptY = this.cameras.main.scrollY + GAME_HEIGHT - 40;
+          const cx = this.cameras.main.scrollX + this.scale.width / 2;
+          const promptY = this.cameras.main.scrollY + this.scale.height - 40;
           const promptLabel = isMobile() ? 'Tap to continue' : 'Press ENTER to continue';
           const promptText = this.add.text(cx, promptY, promptLabel, {
             fontSize: '18px', fontFamily: 'monospace', color: '#44ddff', align: 'center',
@@ -1865,8 +1865,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Show the "Level Complete" / "You Win" text and wire up ENTER/tap to advance. */
   _showLevelComplete() {
-    const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
-    const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
+    const cx = this.cameras.main.scrollX + this.scale.width / 2;
+    const cy = this.cameras.main.scrollY + this.scale.height / 2;
 
     const next = this._levelData.nextLevel;
     const mobile = isMobile();
