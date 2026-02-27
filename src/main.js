@@ -5,6 +5,9 @@ import { PreloadScene } from './scenes/PreloadScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
+import { isMobile } from './utils/mobile.js';
+
+const mobile = isMobile();
 
 const config = {
   type: Phaser.AUTO,
@@ -15,7 +18,12 @@ const config = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    zoom: 2,
+    // On mobile the physical screen is already small — no extra zoom
+    zoom: mobile ? 1 : 2,
+  },
+  input: {
+    // Enable multi-touch so D-pad + action buttons work simultaneously
+    activePointers: mobile ? 4 : 1,
   },
   physics: {
     default: 'arcade',

@@ -14,6 +14,7 @@ import { Drawbridge } from '../puzzles/Drawbridge.js';
 import { getLevelById, getFirstLevel, getNextLevel } from '../levels/LevelRegistry.js';
 import { GeneratorSystem } from '../systems/GeneratorSystem.js';
 import { music } from '../audio/ProceduralMusic.js';
+import { isMobile } from '../utils/mobile.js';
 import {
   generateDumpsterPlatform,
   generateChimneyPlatform,
@@ -161,7 +162,7 @@ export class GameScene extends Phaser.Scene {
         this._generatorHintText = this.add.text(
           g2.x,
           g2.y - 70,
-          "Press 'D' to activate this generator",
+          isMobile() ? "Tap ⚡ to activate this generator" : "Press 'D' to activate this generator",
           {
             fontSize: '14px',
             fontFamily: 'monospace',
@@ -1112,6 +1113,18 @@ export class GameScene extends Phaser.Scene {
     this._dismissTutorial();
     music.playRadioBeep();
 
+    // On mobile, swap keyboard references for touch-control labels
+    const lines = isMobile()
+      ? data.lines.map(line => line
+          .replace(/arrow keys/gi, 'the D-pad')
+          .replace(/Press\s+SPACE\s+or\s+UP/gi, 'Tap ▲')
+          .replace(/Press\s+D\b/gi, 'Tap ⚡')
+          .replace(/Press\s+'D'/gi, "Tap ⚡")
+          .replace(/Press\s+F\b/gi, 'Tap 🔧')
+          .replace(/Press\s+ENTER/gi, 'Tap the screen')
+        )
+      : data.lines;
+
     const portraitKey = data.portraitKey;
     const hasPortrait = !!portraitKey && this.textures.exists(portraitKey);
     const speakerName = data.speakerName || 'MENTOR';
@@ -1136,7 +1149,7 @@ export class GameScene extends Phaser.Scene {
     const portraitGap = hasPortrait ? 10 : 0;
 
     const boxW = hasPortrait ? 420 : 340;
-    const contentH = titleH + padding + data.lines.length * lineH + padding;
+    const contentH = titleH + padding + lines.length * lineH + padding;
     const boxH = Math.max(contentH, titleH + padding + portraitH + padding);
     const boxX = margin;
     const boxY = margin;
@@ -1199,8 +1212,8 @@ export class GameScene extends Phaser.Scene {
     // Body lines
     const bodyTexts = [];
     const bodyStartY = boxY + titleH + padding;
-    for (let i = 0; i < data.lines.length; i++) {
-      const t = this.add.text(contentX, bodyStartY + i * lineH, data.lines[i], {
+    for (let i = 0; i < lines.length; i++) {
+      const t = this.add.text(contentX, bodyStartY + i * lineH, lines[i], {
         fontSize: '13px',
         fontFamily: 'monospace',
         color: '#ccccdd',
@@ -1700,7 +1713,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     // "Press ENTER" hint
-    const hint = this.add.text(boxX + boxW / 2, boxY + boxH - 10, '[ Press ENTER ]', {
+    const hintLabel = isMobile() ? '[ Tap to continue ]' : '[ Press ENTER ]';
+    const hint = this.add.text(boxX + boxW / 2, boxY + boxH - 10, hintLabel, {
       fontSize: '11px', fontFamily: 'monospace', color: '#888888',
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(502);
 
@@ -1709,7 +1723,7 @@ export class GameScene extends Phaser.Scene {
       targets: hint, alpha: 0.3, duration: 500, yoyo: true, repeat: -1,
     });
 
-    // Wait for ENTER to dismiss
+    // Wait for ENTER or tap to dismiss
     const dismiss = () => {
       panel.destroy();
       title.destroy();
@@ -1721,6 +1735,7 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard.once('keydown-ENTER', dismiss);
     this.input.keyboard.once('keydown-SPACE', dismiss);
+    this.input.once('pointerdown', dismiss);
   }
 
   /**
@@ -1827,15 +1842,18 @@ export class GameScene extends Phaser.Scene {
           // Show "Press ENTER to continue" prompt below the popup
           const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
           const promptY = this.cameras.main.scrollY + GAME_HEIGHT - 40;
-          const promptText = this.add.text(cx, promptY, 'Press ENTER to continue', {
+          const promptLabel = isMobile() ? 'Tap to continue' : 'Press ENTER to continue';
+          const promptText = this.add.text(cx, promptY, promptLabel, {
             fontSize: '18px', fontFamily: 'monospace', color: '#44ddff', align: 'center',
           }).setOrigin(0.5).setDepth(502).setScrollFactor(0);
 
-          this.input.keyboard.once('keydown-ENTER', () => {
+          const advanceFromPopup = () => {
             this._dismissTutorial();
             promptText.destroy();
             this._showLevelComplete();
-          });
+          };
+          this.input.keyboard.once('keydown-ENTER', advanceFromPopup);
+          this.input.once('pointerdown', advanceFromPopup);
         });
       } else {
         this._showLevelComplete();
@@ -1843,14 +1861,15 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Show the "Level Complete" / "You Win" text and wire up ENTER to advance. */
+  /** Show the "Level Complete" / "You Win" text and wire up ENTER/tap to advance. */
   _showLevelComplete() {
     const cx = this.cameras.main.scrollX + GAME_WIDTH / 2;
     const cy = this.cameras.main.scrollY + GAME_HEIGHT / 2;
 
     const next = this._levelData.nextLevel;
+    const mobile = isMobile();
     const msg = next
-      ? 'Level Complete!\nPress ENTER for next level'
+      ? (mobile ? 'Level Complete!\nTap for next level' : 'Level Complete!\nPress ENTER for next level')
       : 'Generator Fixed!\nYou Win!';
 
     this.add.text(cx, cy, msg, {
@@ -1858,10 +1877,12 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(200);
 
     if (next) {
-      this.input.keyboard.once('keydown-ENTER', () => {
+      const advance = () => {
         this.scene.stop(SCENES.UI);
         this.scene.restart({ levelId: next });
-      });
+      };
+      this.input.keyboard.once('keydown-ENTER', advance);
+      this.input.once('pointerdown', advance);
     }
   }
 

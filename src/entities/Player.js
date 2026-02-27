@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER } from '../config.js';
+import { PLAYER, SCENES } from '../config.js';
 import { music } from '../audio/ProceduralMusic.js';
 
 /**
@@ -83,6 +83,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Prevent key repeat on action buttons — only fire once per press
     this._actionJustPressed = false;
     this._interactJustPressed = false;
+
+    /** Virtual touch input state (populated by TouchControls on mobile). */
+    this._touch = null;
+  }
+
+  /**
+   * Returns the touch-control state from the UIScene, if available.
+   * Cached per-frame for efficiency.
+   */
+  _getTouchState() {
+    if (this._touch !== undefined && this._touch !== null) return this._touch;
+    const ui = this.scene.scene.get(SCENES.UI);
+    if (ui?.touchControls) {
+      this._touch = ui.touchControls.state;
+    } else {
+      this._touch = null;
+    }
+    return this._touch;
   }
 
   /**
@@ -118,12 +136,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const onGround = this.isSupported();
     const isMoving = Math.abs(this.body.velocity.x) > 5; // Small threshold to ignore tiny movements
 
+    // --- Virtual touch state (mobile) ---
+    const touch = this._getTouchState();
+
     // --- Horizontal movement ---
-    if (this.cursors.left.isDown) {
+    if (this.cursors.left.isDown || touch?.left) {
       this.setVelocityX(-PLAYER.SPEED);
       this.facingRight = false;
       this.setFlipX(true);
-    } else if (this.cursors.right.isDown) {
+    } else if (this.cursors.right.isDown || touch?.right) {
       this.setVelocityX(PLAYER.SPEED);
       this.facingRight = true;
       this.setFlipX(false);
@@ -142,24 +163,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // --- Jump ---
-    if ((this.cursors.up.isDown || this.keys.jump.isDown) && onGround) {
+    if ((this.cursors.up.isDown || this.keys.jump.isDown || touch?.up) && onGround) {
       // Release block before jumping
       if (this.grabbedBlock) this.releaseBlock();
       this.setVelocityY(PLAYER.JUMP_VELOCITY);
     }
 
     // --- Action button (D) — plug / unplug cord ---
-    const actionDown = this.keys.action.isDown;
-    if (actionDown && !this._actionJustPressed) {
+    const actionDown = this.keys.action.isDown || (touch?.action ?? false);
+    const touchActionJust = touch?.actionJustPressed ?? false;
+    if ((actionDown && !this._actionJustPressed) || touchActionJust) {
       this._actionJustPressed = true;
       this.scene.events.emit('player-action', this);
     }
     if (!actionDown) this._actionJustPressed = false;
 
     // --- Interact button (F) — grab / release block ---
-
-    const interactDown = this.keys.interact.isDown;
-    if (interactDown && !this._interactJustPressed) {
+    const interactDown = this.keys.interact.isDown || (touch?.interact ?? false);
+    const touchInteractJust = touch?.interactJustPressed ?? false;
+    if ((interactDown && !this._interactJustPressed) || touchInteractJust) {
       this._interactJustPressed = true;
       this.scene.events.emit('player-interact', this);
     }
