@@ -107,7 +107,7 @@ export class TouchControls {
     const container = scene.add.container(x, y, [gfx]);
     container.setSize(radius * 2, radius * 2);
     container.setInteractive(
-      new Phaser.Geom.Circle(0, 0, radius),
+      new Phaser.Geom.Circle(radius, radius, Math.round(radius * 1.35)),
       Phaser.Geom.Circle.Contains,
     );
     container.setScrollFactor(0);
