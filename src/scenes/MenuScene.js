@@ -18,8 +18,10 @@ export class MenuScene extends Phaser.Scene {
     // ── Dark city-themed background ──
     this._drawBackground();
 
+    const narrow = this.scale.width < 800;
+
     // ── Sparky Joe character image (left side) ──
-    const charX = cx - 220;
+    const charX = narrow ? cx - 180 : cx - 220;
     const charY = cy + 40;
     const sparky = this.add.image(charX, charY, 'sparky_joe_menu');
     // Scale to a nice menu size (~320px tall)
@@ -39,13 +41,15 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // ── Big cartoonish title (right side) ──
-    const titleX = cx + 120;
+    const titleX = narrow ? cx + 100 : cx + 120;
     const titleY = 100;
     const cartoonFont = '"Arial Black", "Impact", "Helvetica", sans-serif';
+    const titleFontSize = narrow ? '44px' : '58px';
+    const subtitleFontSize = narrow ? '28px' : '36px';
 
     // Shadow layer (deep dark outline)
     this.add.text(titleX + 4, titleY + 4, 'SPARKY JOE', {
-      fontSize: '58px',
+      fontSize: titleFontSize,
       fontFamily: cartoonFont,
       color: '#1a0a2e',
       fontStyle: 'bold',
@@ -53,7 +57,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Outer glow / outline layer
     this.add.text(titleX + 2, titleY + 2, 'SPARKY JOE', {
-      fontSize: '58px',
+      fontSize: titleFontSize,
       fontFamily: cartoonFont,
       color: '#ff4400',
       fontStyle: 'bold',
@@ -61,7 +65,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Main title text – bright yellow
     const titleMain = this.add.text(titleX, titleY, 'SPARKY JOE', {
-      fontSize: '58px',
+      fontSize: titleFontSize,
       fontFamily: cartoonFont,
       color: '#ffdd00',
       fontStyle: 'bold',
@@ -71,14 +75,14 @@ export class MenuScene extends Phaser.Scene {
 
     // Subtitle "SAVES THE DAY" with fun styling
     this.add.text(titleX + 3, titleY + 53, 'SAVES THE DAY!', {
-      fontSize: '36px',
+      fontSize: subtitleFontSize,
       fontFamily: cartoonFont,
       color: '#1a0a2e',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
     const subtitleMain = this.add.text(titleX, titleY + 50, 'SAVES THE DAY!', {
-      fontSize: '36px',
+      fontSize: subtitleFontSize,
       fontFamily: cartoonFont,
       color: '#44eeff',
       fontStyle: 'bold',
